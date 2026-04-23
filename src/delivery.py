@@ -1,13 +1,17 @@
-"""Feishu webhook delivery — push briefing as interactive card."""
+"""Feishu webhook delivery — push briefing as interactive card with feedback buttons."""
 
 import logging
+import os
 import re
+from urllib.parse import quote
 
 import httpx
 
 from config import Config
 
 logger = logging.getLogger(__name__)
+
+FEEDBACK_BASE = os.getenv("FEEDBACK_BASE_URL", "http://localhost:9002")
 
 
 class FeishuDelivery:
@@ -41,6 +45,7 @@ class FeishuDelivery:
         elements = []
         lines = md.split("\n")
         i = 0
+        item_idx = 0
 
         while i < len(lines):
             line = lines[i].strip()
@@ -56,7 +61,6 @@ class FeishuDelivery:
 
             if line.startswith("> "):
                 text = line.lstrip("> ").strip()
-                text = re.sub(r"\*\*([^*]+)\*\*", r"**\1**", text)
                 elements.append({
                     "tag": "note",
                     "elements": [{"tag": "plain_text", "content": text}],
@@ -66,15 +70,11 @@ class FeishuDelivery:
 
             if line.startswith("## "):
                 heading = line.lstrip("# ").strip()
-                elements.append({
-                    "tag": "markdown",
-                    "content": f"**{heading}**",
-                })
+                elements.append({"tag": "markdown", "content": f"**{heading}**"})
                 i += 1
                 continue
 
             if line.startswith("### "):
-                # Collect the full item block: title + source + summary + why + link
                 title = line.lstrip("# ").strip()
                 block_lines = [f"**{title}**"]
                 i += 1
@@ -83,7 +83,6 @@ class FeishuDelivery:
                     next_line = lines[i].strip()
                     if not next_line or next_line.startswith("##") or next_line == "---":
                         break
-                    # Convert markdown links
                     next_line = re.sub(r"\*\*([^*]+)\*\*", r"**\1**", next_line)
                     block_lines.append(next_line)
                     i += 1
@@ -92,21 +91,40 @@ class FeishuDelivery:
                     "tag": "markdown",
                     "content": "\n".join(block_lines),
                 })
+
+                # Add feedback buttons
+                item_idx += 1
+                clean_title = re.sub(r"^\d+\.\s*", "", title)
+                encoded_title = quote(clean_title[:50])
+                like_url = f"{FEEDBACK_BASE}/feedback?id={item_idx}&r=like&t={encoded_title}"
+                dislike_url = f"{FEEDBACK_BASE}/feedback?id={item_idx}&r=dislike&t={encoded_title}"
+                elements.append({
+                    "tag": "action",
+                    "actions": [
+                        {
+                            "tag": "button",
+                            "text": {"tag": "plain_text", "content": "👍 有用"},
+                            "type": "primary",
+                            "url": like_url,
+                        },
+                        {
+                            "tag": "button",
+                            "text": {"tag": "plain_text", "content": "👎 不想看"},
+                            "type": "default",
+                            "url": dislike_url,
+                        },
+                    ],
+                })
                 continue
 
-            # Stats / trend / other lines
             text = re.sub(r"\*\*([^*]+)\*\*", r"**\1**", line)
             elements.append({"tag": "markdown", "content": text})
             i += 1
 
-        # Add feedback hint at the end
         elements.append({"tag": "hr"})
         elements.append({
             "tag": "note",
-            "elements": [{
-                "tag": "plain_text",
-                "content": "📬 反馈：对本条消息点 👍 或 👎 表情来帮助我学习你的偏好",
-            }],
+            "elements": [{"tag": "plain_text", "content": "📬 点击按钮反馈，帮助系统学习你的偏好"}],
         })
 
         title = "📋 VC 每日简报"

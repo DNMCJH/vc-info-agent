@@ -35,13 +35,16 @@ vc-info-agent/
 ├── .env.example
 ├── src/
 │   ├── main.py            ← Pipeline entry point
-│   ├── config.py          ← Configuration
+│   ├── scheduler.py       ← 24/7 auto-run (APScheduler, daily 08:00)
+│   ├── config.py          ← System config (loads sources.yaml)
+│   ├── sources.yaml       ← Info source config (channels, keywords, RSS)
 │   ├── collector.py       ← YouTube collector (channel + keyword modes)
 │   ├── rss_collector.py   ← RSS feed collector
 │   ├── filter.py          ← Quality scoring + feedback integration
 │   ├── summarizer.py      ← LLM summarization + briefing generation
-│   ├── delivery.py        ← Feishu webhook push
-│   └── feedback.py        ← User feedback CLI + preference store
+│   ├── delivery.py        ← Feishu interactive card push
+│   ├── feedback.py        ← User feedback CLI + preference store
+│   └── feedback_server.py ← HTTP feedback service (for Feishu button callbacks)
 ├── data/
 │   └── feedback.json      ← User preference data (auto-generated)
 └── sample_output/
