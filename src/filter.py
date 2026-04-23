@@ -137,19 +137,25 @@ class ContentFilter:
         return result
 
     def _select_top(self, scored: list[dict]) -> list[dict]:
-        """Pick top items per domain, respecting max limits."""
+        """Pick top items per domain and per source, respecting max limits."""
         result = []
         domain_counts: dict[str, int] = {}
+        source_counts: dict[str, int] = {}
+        max_per_source = 2
 
         for item in scored:
             domain = item.get("domain", "other")
-            count = domain_counts.get(domain, 0)
-            if count >= self.config.max_items_per_domain:
+            channel = item.get("channel", "")
+
+            if domain_counts.get(domain, 0) >= self.config.max_items_per_domain:
+                continue
+            if source_counts.get(channel, 0) >= max_per_source:
                 continue
             if len(result) >= self.config.max_total_items:
                 break
             result.append(item)
-            domain_counts[domain] = count + 1
+            domain_counts[domain] = domain_counts.get(domain, 0) + 1
+            source_counts[channel] = source_counts.get(channel, 0) + 1
 
         return result
 
