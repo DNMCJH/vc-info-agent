@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timezone
 
 from config import Config
+from feedback import FeedbackStore
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 class ContentFilter:
     def __init__(self, config: Config):
         self.config = config
+        self.feedback = FeedbackStore()
 
     def filter(self, items: list[dict]) -> list[dict]:
         scored = []
@@ -40,15 +42,24 @@ class ContentFilter:
         else:
             score += 5
 
-        # Content length (15%) — use duration for YouTube
-        duration_str = item.get("duration", "PT0S")
-        minutes = self._parse_duration_minutes(duration_str)
-        if minutes >= 10:
-            score += 15
-        elif minutes >= 5:
-            score += 10
-        elif minutes >= 2:
-            score += 5
+        # Content length (15%) — duration for YouTube, description length for RSS
+        if item.get("source") == "YouTube":
+            duration_str = item.get("duration", "PT0S")
+            minutes = self._parse_duration_minutes(duration_str)
+            if minutes >= 10:
+                score += 15
+            elif minutes >= 5:
+                score += 10
+            elif minutes >= 2:
+                score += 5
+        else:
+            desc_len = len(item.get("description", ""))
+            if desc_len >= 1000:
+                score += 15
+            elif desc_len >= 500:
+                score += 10
+            elif desc_len >= 200:
+                score += 5
 
         # Engagement (20%)
         likes = item.get("likes", 0)
@@ -63,12 +74,12 @@ class ContentFilter:
         else:
             score += 3
 
-        # Keyword relevance (20%)
+        # Keyword relevance (20%) — use domain_keywords from config
         text = f"{item.get('title', '')} {item.get('description', '')}".lower()
-        domain_keywords = []
-        for kws in self.config.youtube_keywords.values():
-            domain_keywords.extend(kws)
-        hits = sum(1 for kw in domain_keywords if kw.lower() in text)
+        all_keywords = []
+        for kws in self.config.domain_keywords.values():
+            all_keywords.extend(kws)
+        hits = sum(1 for kw in all_keywords if kw.lower() in text)
         score += min(hits * 5, 20)
 
         # Recency (10%)
@@ -91,9 +102,13 @@ class ContentFilter:
         if spam_hits > 0:
             score -= min(spam_hits * 10, 30)
 
-        # Short link / UTM penalty
         if re.search(r"bit\.ly|utm_|affiliate", text):
             score -= 15
+
+        # Feedback preference adjustment
+        source_weight = self.feedback.get_source_weight(item.get("channel", ""))
+        domain_weight = self.feedback.get_domain_weight(item.get("domain", ""))
+        score += int(source_weight * 3 + domain_weight * 2)
 
         return max(score, 0)
 

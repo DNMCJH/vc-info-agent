@@ -9,7 +9,6 @@ from opencc import OpenCC
 from config import Config
 
 _t2s = OpenCC("t2s")
-
 logger = logging.getLogger(__name__)
 
 
@@ -19,10 +18,19 @@ class YouTubeCollector:
         self.youtube = build("youtube", "v3", developerKey=config.youtube_api_key)
 
     def collect(self) -> list[dict]:
-        """Collect videos from YouTube for all configured domains."""
+        """Collect videos via channel subscriptions + keyword search."""
         all_items = []
         since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
 
+        # Mode 1: Channel subscriptions (low API cost, high precision)
+        for channel_id, domain in self.config.youtube_channels.items():
+            try:
+                items = self._collect_from_channel(channel_id, domain, since)
+                all_items.extend(items)
+            except Exception as e:
+                logger.warning(f"Failed channel {channel_id}: {e}")
+
+        # Mode 2: Keyword search (broader coverage)
         for domain, keywords in self.config.youtube_keywords.items():
             for keyword in keywords:
                 try:
@@ -41,21 +49,46 @@ class YouTubeCollector:
         logger.info(f"Collected {len(unique)} unique videos from YouTube")
         return unique
 
+    def _collect_from_channel(self, channel_id: str, domain: str, since: str) -> list[dict]:
+        """Fetch recent videos from a specific channel's uploads playlist."""
+        ch_resp = self.youtube.channels().list(
+            part="contentDetails", id=channel_id,
+        ).execute()
+        items = ch_resp.get("items", [])
+        if not items:
+            return []
+
+        uploads_id = items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+        pl_resp = self.youtube.playlistItems().list(
+            part="snippet", playlistId=uploads_id, maxResults=5,
+        ).execute()
+
+        video_ids = []
+        for item in pl_resp.get("items", []):
+            pub = item["snippet"].get("publishedAt", "")
+            if pub >= since:
+                video_ids.append(item["snippet"]["resourceId"]["videoId"])
+
+        if not video_ids:
+            return []
+
+        return self._fetch_video_details(video_ids, domain)
+
     def _search(self, keyword: str, since: str, domain: str) -> list[dict]:
         resp = self.youtube.search().list(
-            q=keyword,
-            type="video",
-            part="snippet",
-            publishedAfter=since,
-            maxResults=5,
-            order="relevance",
-            relevanceLanguage="en",
+            q=keyword, type="video", part="snippet",
+            publishedAfter=since, maxResults=5,
+            order="relevance", relevanceLanguage="en",
         ).execute()
 
         video_ids = [item["id"]["videoId"] for item in resp.get("items", [])]
         if not video_ids:
             return []
 
+        return self._fetch_video_details(video_ids, domain)
+
+    def _fetch_video_details(self, video_ids: list[str], domain: str) -> list[dict]:
+        """Fetch full details for a list of video IDs."""
         details = self.youtube.videos().list(
             part="snippet,statistics,contentDetails",
             id=",".join(video_ids),
@@ -80,7 +113,6 @@ class YouTubeCollector:
                 "source": "YouTube",
                 "transcript": _t2s.convert(self._get_transcript(video["id"])),
             })
-
         return results
 
     def _get_transcript(self, video_id: str) -> str:

@@ -2,24 +2,50 @@
 
 [中文版](#中文说明)
 
-An AI-powered information aggregation agent for venture capital professionals. It automatically collects high-quality content from YouTube (expandable to Twitter/X, WeChat), filters noise, and generates a structured daily briefing using LLM.
+An AI-powered information aggregation agent for venture capital professionals. Automatically collects content from YouTube and RSS feeds, filters noise, generates structured daily briefings with investment insights using LLM, and delivers via Feishu.
+
+## Architecture
+
+```
+Scheduler (Cron)
+       │
+       ├── YouTube Collector (API v3: channel subscriptions + keyword search)
+       ├── RSS Collector (TechCrunch, MIT Tech Review, 36氪, 量子位...)
+       │
+       ▼
+Content Filter (multi-dimensional scoring + user preference weights)
+       │
+       ▼
+LLM Summarizer (DeepSeek — structured summary + "Why it matters")
+       │
+       ▼
+Brief Generator (Markdown) ──→ Feishu Webhook
+       │
+       ▼
+Feedback Loop (👍👎 → preference learning → filter weight adjustment)
+```
 
 ## Project Structure
 
 ```
 vc-info-agent/
-├── README.md              ← You are here
+├── README.md
 ├── design.md              ← System design document
-├── requirements.txt       ← Python dependencies
-├── .env.example           ← Environment variable template
+├── requirements.txt
+├── .env.example
 ├── src/
-│   ├── main.py            ← Entry point — runs the full pipeline
-│   ├── config.py          ← Configuration and defaults
-│   ├── collector.py       ← YouTube data collector
-│   ├── filter.py          ← Content quality scoring and filtering
-│   └── summarizer.py      ← LLM-based summarization and briefing generation
+│   ├── main.py            ← Pipeline entry point
+│   ├── config.py          ← Configuration
+│   ├── collector.py       ← YouTube collector (channel + keyword modes)
+│   ├── rss_collector.py   ← RSS feed collector
+│   ├── filter.py          ← Quality scoring + feedback integration
+│   ├── summarizer.py      ← LLM summarization + briefing generation
+│   ├── delivery.py        ← Feishu webhook push
+│   └── feedback.py        ← User feedback CLI + preference store
+├── data/
+│   └── feedback.json      ← User preference data (auto-generated)
 └── sample_output/
-    └── briefing_2026-04-23.md  ← Sample briefing (mock data)
+    └── briefing_2026-04-24.md
 ```
 
 ## Quick Start
@@ -27,24 +53,18 @@ vc-info-agent/
 ### Prerequisites
 
 - Python 3.10+
-- A YouTube Data API v3 key ([get one here](https://console.cloud.google.com/apis/credentials))
-- A DeepSeek API key ([get one here](https://platform.deepseek.com/api_keys)), or any OpenAI-compatible LLM API
+- YouTube Data API v3 key ([get one here](https://console.cloud.google.com/apis/credentials))
+- DeepSeek API key ([get one here](https://platform.deepseek.com/api_keys)), or any OpenAI-compatible LLM
 
 ### Setup
 
 ```bash
 cd vc-info-agent
-
-# Create virtual environment
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Configure API keys
 cp .env.example .env
-# Edit .env and fill in your API keys
+# Edit .env with your API keys
 ```
 
 ### Run
@@ -54,29 +74,49 @@ cd src
 python main.py
 ```
 
-The briefing will be saved to `sample_output/briefing_YYYY-MM-DD.md`.
+The briefing is saved to `sample_output/briefing_YYYY-MM-DD.md`.
 
-### Using a Different LLM
-
-Edit `.env` to point to any OpenAI-compatible API:
+### Provide Feedback
 
 ```bash
-# OpenAI
-LLM_BASE_URL=https://api.openai.com
-LLM_MODEL=gpt-4o-mini
-LLM_API_KEY=sk-xxx
+cd src
+python feedback.py
+```
 
-# Qwen (通义千问)
-LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode
-LLM_MODEL=qwen-plus
-LLM_API_KEY=sk-xxx
+Review the latest briefing and mark items as 👍 like / 👎 dislike. Preferences are saved to `data/feedback.json` and influence future content ranking.
+
+### Feishu Push (Optional)
+
+Set `FEISHU_WEBHOOK` in `.env` to automatically push briefings to a Feishu group chat.
+
+## Briefing Preview
+
+```
+# 📋 VC 每日简报 — 2026.04.24（周四）
+
+> 今日共采集 156 条内容，精选 10 条高质量信息。
+
+## 🤖 AI领域（4 条）
+
+### 1. OpenAI o3-pro: Reasoning Cost Down 60%
+📺 YouTube · AI Explained · 14 分钟
+OpenAI 发布 o3-pro，代码生成准确率 94.2%，推理效率提升 3 倍。
+💡 Why it matters: 推理成本下降加速 AI coding 赛道洗牌，
+   Cursor 等公司需快速建立差异化壁垒。
+
+### 2. a16z: Why We're All-in on AI Agents
+📝 TechCrunch
+a16z 发布年度 AI 投资主题报告，Agent 壁垒在数据飞轮而非模型。
+💡 Why it matters: 头部 VC 投资主题转向直接影响创业融资策略。
 ```
 
 ## Design Highlights
 
-- **Multi-dimensional quality scoring**: Each piece of content is scored across 6 dimensions (source credibility, content length, engagement, keyword relevance, recency, spam detection)
-- **Feedback loop ready**: Architecture supports user feedback (thumbs up/down) to iteratively improve content selection
-- **Mobile-friendly briefing**: Designed to be read in under 5 minutes on a phone — short paragraphs, emoji markers, structured by domain
+- **Dual-mode YouTube collection**: Channel subscriptions (precise, low API cost) + keyword search (broad coverage)
+- **Multi-source aggregation**: YouTube + RSS feeds covering English and Chinese tech media
+- **Investment-focused summaries**: Each item includes "Why it matters" from a VC perspective
+- **Feedback-driven personalization**: User reactions adjust content ranking weights over time
+- **Mobile-friendly briefing**: Designed for 5-minute reading on phone
 
 See [design.md](design.md) for the full system design document.
 
@@ -86,46 +126,41 @@ See [design.md](design.md) for the full system design document.
 
 [English Version](#vc-info-agent)
 
-面向 VC 投资人的 AI 信息聚合 Agent。自动从 YouTube 采集高质量内容（可扩展至 Twitter/X、微信公众号），过滤噪音，通过 LLM 生成结构化每日简报。
+面向 VC 投资人的 AI 信息聚合 Agent。自动从 YouTube 和 RSS 源采集内容，过滤噪音，通过 LLM 生成带投资洞察的结构化每日简报，支持飞书推送。
 
 ## 快速开始
 
 ### 环境要求
 
 - Python 3.10+
-- YouTube Data API v3 密钥（[申请地址](https://console.cloud.google.com/apis/credentials)）
-- DeepSeek API 密钥（[申请地址](https://platform.deepseek.com/api_keys)），或任何 OpenAI 兼容的 LLM API
+- YouTube Data API v3 密钥
+- DeepSeek API 密钥（或任何 OpenAI 兼容 LLM）
 
-### 安装
+### 安装运行
 
 ```bash
 cd vc-info-agent
-
-# 创建虚拟环境
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# 安装依赖
 pip install -r requirements.txt
-
-# 配置 API 密钥
-cp .env.example .env
-# 编辑 .env，填入你的 API Key
+cp .env.example .env       # 编辑 .env 填入 API Key
+cd src && python main.py
 ```
 
-### 运行
+### 提供反馈
 
 ```bash
-cd src
-python main.py
+python feedback.py         # 回放简报，标记 👍👎
 ```
 
-简报将保存到 `sample_output/briefing_YYYY-MM-DD.md`。
+反馈数据保存在 `data/feedback.json`，会影响后续内容排序。
 
 ## 设计亮点
 
-- **多维度质量评分**：6 个维度（来源权威性、内容长度、互动指标、关键词匹配、时效性、垃圾检测）综合打分
-- **反馈闭环**：架构支持用户反馈（👍👎），逐步学习偏好
-- **手机友好**：简报控制在 5 分钟内读完，短段落 + emoji 标记 + 按领域分区
+- **YouTube 双模式采集**：频道订阅（精准、低 API 消耗）+ 关键词搜索（广覆盖）
+- **多源聚合**：YouTube + RSS，覆盖中英文科技媒体
+- **投资视角摘要**：每条内容附 "Why it matters" 分析
+- **反馈驱动个性化**：用户反馈动态调整内容排序权重
+- **手机友好**：简报控制在 5 分钟内读完
 
 完整系统设计见 [design.md](design.md)。
