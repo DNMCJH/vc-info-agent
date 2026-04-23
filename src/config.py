@@ -25,6 +25,7 @@ class Config:
         "AI": [
             "AI agent 2026", "artificial intelligence startup",
             "LLM breakthrough", "AI投资",
+            "OpenAI GPT", "Claude Anthropic", "AI image generation",
         ],
         "芯片": [
             "semiconductor 2026", "chip design",
@@ -44,8 +45,12 @@ class Config:
         "UCsBjURrPoezykLs9EqgamOA": "AI",       # Fireship
         "UCVHFbqXqoYvEWM1Ddxl0QDg": "AI",       # a16z
         "UCcefcZRL2oaA_uBNeo5UOWg": "AI",       # Y Combinator
-        "UC-8QAzbLcRglXeN_MY9blyw": "芯片",     # Bloomberg Technology
         "UCXZCJLvIRZ1CCST61YoGemw": "机器人",   # Figure
+        "UC-8QAzbLcRglXeN_MY9blyw": "芯片",     # Bloomberg Technology
+        # Big 3 AI companies
+        "UCXuqSBlHAE6Xw-yeJA0Tunw": "AI",       # OpenAI
+        "UCLXo7UDZvByw2ixzpQCufnA": "AI",       # Google DeepMind
+        "UCkMjY_sB3XsJRMRX0wKzGSg": "AI",       # Anthropic
     })
 
     # --- RSS feeds ---
@@ -76,8 +81,8 @@ class Config:
     })
 
     quality_threshold: int = 40
-    max_items_per_domain: int = 4
-    max_total_items: int = 12
+    max_items_per_domain: int = 3
+    max_total_items: int = 8
 
     kol_whitelist: list[str] = field(default_factory=lambda: [
         "AI Explained", "Two Minute Papers", "Fireship",
@@ -100,7 +105,9 @@ class Config:
     domain_keywords: dict[str, list[str]] = field(default_factory=lambda: {
         "AI": ["AI", "LLM", "GPT", "agent", "大模型", "人工智能", "机器学习",
                "deep learning", "transformer", "neural", "OpenAI", "Anthropic",
-               "DeepSeek", "Claude", "Gemini"],
+               "DeepSeek", "Claude", "Gemini", "image generation", "multimodal",
+               "reasoning", "Sora", "DALL-E", "Midjourney", "Stable Diffusion",
+               "Google DeepMind", "foundation model"],
         "芯片": ["chip", "semiconductor", "GPU", "NVIDIA", "TSMC", "台积电",
                  "芯片", "半导体", "晶圆", "制程", "HBM", "CoWoS", "AMD", "Intel"],
         "机器人": ["robot", "humanoid", "机器人", "人形", "Boston Dynamics",

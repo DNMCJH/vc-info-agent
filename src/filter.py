@@ -24,10 +24,11 @@ class ContentFilter:
                 scored.append(item)
 
         scored.sort(key=lambda x: x["quality_score"], reverse=True)
+        deduped = self._deduplicate(scored)
 
-        result = self._select_top(scored)
+        result = self._select_top(deduped)
         logger.info(
-            f"Filtered {len(items)} → {len(scored)} above threshold → {len(result)} selected"
+            f"Filtered {len(items)} → {len(scored)} above threshold → {len(deduped)} after dedup → {len(result)} selected"
         )
         return result
 
@@ -111,6 +112,26 @@ class ContentFilter:
         score += int(source_weight * 3 + domain_weight * 2)
 
         return max(score, 0)
+
+    @staticmethod
+    def _deduplicate(items: list[dict]) -> list[dict]:
+        """Remove items covering the same event using keyword overlap in titles."""
+        result = []
+        for item in items:
+            title_words = set(re.findall(r"\w+", item.get("title", "").lower()))
+            is_dup = False
+            for existing in result:
+                existing_words = set(re.findall(r"\w+", existing.get("title", "").lower()))
+                if not title_words or not existing_words:
+                    continue
+                overlap = len(title_words & existing_words)
+                similarity = overlap / min(len(title_words), len(existing_words))
+                if similarity > 0.5:
+                    is_dup = True
+                    break
+            if not is_dup:
+                result.append(item)
+        return result
 
     def _select_top(self, scored: list[dict]) -> list[dict]:
         """Pick top items per domain, respecting max limits."""
