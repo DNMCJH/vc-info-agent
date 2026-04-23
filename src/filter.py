@@ -62,11 +62,14 @@ class ContentFilter:
             elif desc_len >= 200:
                 score += 5
 
-        # Engagement (20%)
+        # Engagement (20%) — RSS gets authority-based compensation
         likes = item.get("likes", 0)
         comments = item.get("comments", 0)
         engagement = likes + comments * 2
-        if engagement > 5000:
+        if item.get("source") == "RSS":
+            authority = item.get("source_authority", "medium")
+            score += {"high": 15, "medium": 10, "low": 3}.get(authority, 3)
+        elif engagement > 5000:
             score += 20
         elif engagement > 1000:
             score += 15
