@@ -41,6 +41,8 @@ BRIEFING_PROMPT = """你是一位专业的 VC 行业分析师。请根据以下�
 
 
 class Summarizer:
+    """Generates structured summaries and daily briefings using LLM."""
+
     def __init__(self, config: Config):
         self.config = config
         self.client = httpx.Client(
@@ -162,6 +164,7 @@ class Summarizer:
         return "观看原视频" if item.get("source") == "YouTube" else "阅读原文"
 
     def _call_llm(self, prompt: str) -> str:
+        """Call LLM API and return the response text. Raises on HTTP errors."""
         resp = self.client.post(
             "/v1/chat/completions",
             json={
@@ -172,7 +175,12 @@ class Summarizer:
             },
         )
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"].strip()
+        data = resp.json()
+        try:
+            return data["choices"][0]["message"]["content"].strip()
+        except (KeyError, IndexError):
+            logger.warning(f"Unexpected LLM response format: {str(data)[:200]}")
+            return ""
 
     @staticmethod
     def _format_duration(iso_duration: str) -> str:

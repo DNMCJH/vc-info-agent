@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class YouTubeCollector:
+    """Collects videos from YouTube via channel subscriptions and keyword search."""
+
     def __init__(self, config: Config):
         self.config = config
         self.youtube = build("youtube", "v3", developerKey=config.youtube_api_key)

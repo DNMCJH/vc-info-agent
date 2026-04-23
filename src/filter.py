@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class ContentFilter:
+    """Scores, deduplicates, and selects top content items by quality."""
+
     def __init__(self, config: Config):
         self.config = config
         self.feedback = FeedbackStore()
@@ -33,6 +35,7 @@ class ContentFilter:
         return result
 
     def _score(self, item: dict) -> int:
+        """Calculate quality score (0-100) across 6 dimensions + feedback adjustment."""
         score = 0
 
         # Source credibility (25%)

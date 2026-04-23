@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class RSSCollector:
+    """Collects articles from configured RSS feeds with domain classification."""
+
     def __init__(self, config: Config):
         self.config = config
 

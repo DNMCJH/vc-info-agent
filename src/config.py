@@ -16,8 +16,12 @@ _SOURCES_PATH = Path(__file__).parent / "sources.yaml"
 
 
 def _load_sources() -> dict:
+    """Load info source config from sources.yaml, return empty dict if missing."""
     if _SOURCES_PATH.exists():
-        return yaml.safe_load(_SOURCES_PATH.read_text(encoding="utf-8"))
+        try:
+            return yaml.safe_load(_SOURCES_PATH.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            return {}
     return {}
 
 
@@ -26,6 +30,8 @@ _src = _load_sources()
 
 @dataclass
 class Config:
+    """Central configuration — API keys from .env, info sources from sources.yaml."""
+
     # API keys (from .env)
     youtube_api_key: str = os.getenv("YOUTUBE_API_KEY", "")
     llm_api_key: str = os.getenv("LLM_API_KEY", "")

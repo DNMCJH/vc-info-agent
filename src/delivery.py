@@ -15,6 +15,8 @@ FEEDBACK_BASE = os.getenv("FEEDBACK_BASE_URL", "http://localhost:9002")
 
 
 class FeishuDelivery:
+    """Pushes briefing to Feishu group chat as interactive card with feedback buttons."""
+
     def __init__(self, config: Config):
         self.webhook_url = config.feishu_webhook
 

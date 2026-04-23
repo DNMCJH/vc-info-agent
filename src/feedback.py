@@ -13,13 +13,19 @@ FEEDBACK_FILE = DATA_DIR / "feedback.json"
 
 
 class FeedbackStore:
+    """Persists user feedback (like/dislike) and computes preference weights."""
+
     def __init__(self):
         DATA_DIR.mkdir(exist_ok=True)
         self.data = self._load()
 
     def _load(self) -> dict:
+        """Load feedback data from JSON file, return empty structure if missing or corrupted."""
         if FEEDBACK_FILE.exists():
-            return json.loads(FEEDBACK_FILE.read_text(encoding="utf-8"))
+            try:
+                return json.loads(FEEDBACK_FILE.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                logger.warning("feedback.json corrupted, resetting")
         return {"items": {}, "preferences": {"sources": {}, "keywords": {}, "domains": {}}}
 
     def _save(self):
