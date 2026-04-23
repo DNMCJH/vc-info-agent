@@ -99,6 +99,16 @@ class FeishuDelivery:
             elements.append({"tag": "markdown", "content": text})
             i += 1
 
+        # Add feedback hint at the end
+        elements.append({"tag": "hr"})
+        elements.append({
+            "tag": "note",
+            "elements": [{
+                "tag": "plain_text",
+                "content": "📬 反馈：对本条消息点 👍 或 👎 表情来帮助我学习你的偏好",
+            }],
+        })
+
         title = "📋 VC 每日简报"
         for line in lines:
             if line.startswith("# "):
