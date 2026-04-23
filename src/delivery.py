@@ -71,7 +71,6 @@ class FeishuDelivery:
             if line.startswith("# "):
                 continue
 
-            # Convert markdown links to Feishu href tags
             link_match = re.search(r"\[([^\]]+)\]\(([^)]+)\)", line)
             if link_match:
                 text_before = line[:link_match.start()].strip()
@@ -87,19 +86,18 @@ class FeishuDelivery:
                     paragraphs.append(current_para)
                     current_para = []
                 heading = line.lstrip("#").strip()
-                current_para.append({"tag": "text", "text": heading, "style": ["bold"]})
+                current_para.append({"tag": "text", "text": f"【{heading}】\n"})
             elif line.startswith(">"):
                 text = line.lstrip("> ").strip()
-                current_para.append({"tag": "text", "text": text, "style": ["italic"]})
+                current_para.append({"tag": "text", "text": text + "\n"})
             elif line == "---":
                 if current_para:
                     paragraphs.append(current_para)
                     current_para = []
                 paragraphs.append([{"tag": "text", "text": "─" * 20}])
             else:
-                # Strip bold markers
                 text = re.sub(r"\*\*([^*]+)\*\*", r"\1", line)
-                current_para.append({"tag": "text", "text": text})
+                current_para.append({"tag": "text", "text": text + "\n"})
 
         if current_para:
             paragraphs.append(current_para)
