@@ -19,6 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 MAIN_SCRIPT = str(Path(__file__).parent / "main.py")
+SRC_DIR = str(Path(__file__).parent)
 PYTHON = sys.executable
 
 
@@ -28,6 +29,7 @@ def run_pipeline():
         result = subprocess.run(
             [PYTHON, MAIN_SCRIPT],
             capture_output=True, text=True, timeout=600,
+            cwd=SRC_DIR,
         )
         if result.returncode == 0:
             logger.info("Pipeline completed successfully")
