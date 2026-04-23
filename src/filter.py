@@ -1,0 +1,125 @@
+"""Content filter — scores and filters collected items by quality."""
+
+import logging
+import re
+from datetime import datetime, timezone
+
+from config import Config
+
+logger = logging.getLogger(__name__)
+
+
+class ContentFilter:
+    def __init__(self, config: Config):
+        self.config = config
+
+    def filter(self, items: list[dict]) -> list[dict]:
+        scored = []
+        for item in items:
+            score = self._score(item)
+            item["quality_score"] = score
+            if score >= self.config.quality_threshold:
+                scored.append(item)
+
+        scored.sort(key=lambda x: x["quality_score"], reverse=True)
+
+        result = self._select_top(scored)
+        logger.info(
+            f"Filtered {len(items)} → {len(scored)} above threshold → {len(result)} selected"
+        )
+        return result
+
+    def _score(self, item: dict) -> int:
+        score = 0
+
+        # Source credibility (25%)
+        if item.get("channel", "") in self.config.kol_whitelist:
+            score += 25
+        elif item.get("views", 0) > 10000:
+            score += 15
+        else:
+            score += 5
+
+        # Content length (15%) — use duration for YouTube
+        duration_str = item.get("duration", "PT0S")
+        minutes = self._parse_duration_minutes(duration_str)
+        if minutes >= 10:
+            score += 15
+        elif minutes >= 5:
+            score += 10
+        elif minutes >= 2:
+            score += 5
+
+        # Engagement (20%)
+        likes = item.get("likes", 0)
+        comments = item.get("comments", 0)
+        engagement = likes + comments * 2
+        if engagement > 5000:
+            score += 20
+        elif engagement > 1000:
+            score += 15
+        elif engagement > 100:
+            score += 10
+        else:
+            score += 3
+
+        # Keyword relevance (20%)
+        text = f"{item.get('title', '')} {item.get('description', '')}".lower()
+        domain_keywords = []
+        for kws in self.config.youtube_keywords.values():
+            domain_keywords.extend(kws)
+        hits = sum(1 for kw in domain_keywords if kw.lower() in text)
+        score += min(hits * 5, 20)
+
+        # Recency (10%)
+        try:
+            pub = datetime.fromisoformat(item["published_at"].replace("Z", "+00:00"))
+            hours_ago = (datetime.now(timezone.utc) - pub).total_seconds() / 3600
+            if hours_ago < 6:
+                score += 10
+            elif hours_ago < 12:
+                score += 7
+            elif hours_ago < 24:
+                score += 5
+        except (KeyError, ValueError):
+            score += 3
+
+        # Spam penalty (10%)
+        spam_hits = sum(
+            1 for kw in self.config.spam_keywords if kw.lower() in text
+        )
+        if spam_hits > 0:
+            score -= min(spam_hits * 10, 30)
+
+        # Short link / UTM penalty
+        if re.search(r"bit\.ly|utm_|affiliate", text):
+            score -= 15
+
+        return max(score, 0)
+
+    def _select_top(self, scored: list[dict]) -> list[dict]:
+        """Pick top items per domain, respecting max limits."""
+        result = []
+        domain_counts: dict[str, int] = {}
+
+        for item in scored:
+            domain = item.get("domain", "other")
+            count = domain_counts.get(domain, 0)
+            if count >= self.config.max_items_per_domain:
+                continue
+            if len(result) >= self.config.max_total_items:
+                break
+            result.append(item)
+            domain_counts[domain] = count + 1
+
+        return result
+
+    @staticmethod
+    def _parse_duration_minutes(iso_duration: str) -> float:
+        match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", iso_duration)
+        if not match:
+            return 0
+        h = int(match.group(1) or 0)
+        m = int(match.group(2) or 0)
+        s = int(match.group(3) or 0)
+        return h * 60 + m + s / 60
