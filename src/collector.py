@@ -4,8 +4,11 @@ import logging
 from datetime import datetime, timedelta, timezone
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
+from opencc import OpenCC
 
 from config import Config
+
+_t2s = OpenCC("t2s")
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +67,9 @@ class YouTubeCollector:
             stats = video.get("statistics", {})
             results.append({
                 "video_id": video["id"],
-                "title": snippet["title"],
-                "channel": snippet["channelTitle"],
-                "description": snippet.get("description", "")[:2000],
+                "title": _t2s.convert(snippet["title"]),
+                "channel": _t2s.convert(snippet["channelTitle"]),
+                "description": _t2s.convert(snippet.get("description", "")[:2000]),
                 "published_at": snippet["publishedAt"],
                 "views": int(stats.get("viewCount", 0)),
                 "likes": int(stats.get("likeCount", 0)),
@@ -75,7 +78,7 @@ class YouTubeCollector:
                 "url": f"https://youtube.com/watch?v={video['id']}",
                 "domain": domain,
                 "source": "YouTube",
-                "transcript": self._get_transcript(video["id"]),
+                "transcript": _t2s.convert(self._get_transcript(video["id"])),
             })
 
         return results
