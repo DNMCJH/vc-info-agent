@@ -100,7 +100,7 @@ class ContentFilter:
             1 for kw in self.config.spam_keywords if kw.lower() in text
         )
         if spam_hits > 0:
-            score -= min(spam_hits * 10, 30)
+            score -= min(spam_hits * 15, 45)
 
         if re.search(r"bit\.ly|utm_|affiliate", text):
             score -= 15

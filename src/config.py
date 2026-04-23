@@ -93,7 +93,7 @@ class Config:
         "affiliate link", "sponsored",
         # Gaming/consumer hardware noise
         "FPS", "benchmark", "gaming setup", "unboxing",
-        "graphics card review", "overclock",
+        "graphics card review", "overclock", "graphics card",
     ])
 
     # Domain keyword list for relevance scoring (shared by filter)
