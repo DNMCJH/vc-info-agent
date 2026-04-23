@@ -1,7 +1,7 @@
 """Summarizer — uses LLM to generate structured summaries and daily briefing."""
 
-import json
 import logging
+import re
 from datetime import datetime
 
 import httpx
@@ -139,8 +139,6 @@ class Summarizer:
 
     @staticmethod
     def _format_duration(iso_duration: str) -> str:
-        import re
-
         match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", iso_duration)
         if not match:
             return "未知时长"
