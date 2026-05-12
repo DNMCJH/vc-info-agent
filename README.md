@@ -177,3 +177,52 @@ python feedback.py         # 回放简报，标记 👍👎
 - **手机友好**：简报控制在 5 分钟内读完
 
 完整系统设计见 [design.md](design.md)。
+
+
+---
+
+## v0.2.1 Updates (2026-05-12)
+
+### Multi-platform Source Pool
+- New `src/source_pool.yaml` with 40+ AI sources across YouTube, X, RSS, WeChat MP, websites
+- Categories: research_pioneer, power_center, builder_practitioner, educator_curator, ethics_safety, cn_media, vc_startup
+- Clear status labels: `active` (automated), `candidate` (important, not yet automated), `pending` (needs research)
+- X and WeChat MP sources are **candidate/pending** — not yet automatically collected
+
+### Feedback Learning Loop
+- **Stable item_id**: deterministic SHA1 hash from URL + title + date, consistent across runs
+- **JSON briefing**: `data/briefings/briefing_YYYY-MM-DD.json` with full item metadata
+- **Feedback events**: `feedback.json` stores complete metadata snapshots + event history + optional comments
+- **Preference context**: summarizer reads recent liked/disliked examples to adjust attention angle (not facts)
+- **Filter adjustment**: `get_item_adjustment(item)` uses exact match, source/domain weight, and title overlap
+- **Comment support**: feedback server returns optional comment form after recording reaction
+
+### Feishu Delivery
+- Buttons now use stable `item_id` instead of briefing sequence numbers
+- Feedback server looks up full metadata from briefing JSON by item_id
+
+### Architecture
+```
+source_pool.yaml (multi-platform registry)
+    ↓
+YouTube/RSS collectors (active sources)
+    ↓
+ContentFilter (rule scoring + historical feedback adjustment)
+    ↓
+Summarizer (LLM + preference context injection)
+    ↓
+Markdown briefing + JSON briefing
+    ↓
+Feishu card (stable item_id buttons)
+    ↓
+Feedback server → feedback.json (metadata + events + comments)
+    ↓
+Next run: filter + summarizer read historical preferences
+```
+
+### Deployment Note
+Current: friend's computer + Cloudflare Tunnel (demo-grade).
+Planned v0.3: Hong Kong / Singapore / Japan lightweight VPS for stable 24h operation.
+
+### Skill Documentation
+See `docs/skills/` for modular pipeline documentation (9 skill drafts).

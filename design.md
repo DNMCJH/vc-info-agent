@@ -234,3 +234,71 @@ a16z 发布年度 AI 投资主题报告，核心观点：Agent 的壁垒不在�
 3. **向量数据库语义去重**：用 embedding 相似度替代简单的标题匹配，解决"同一事件不同报道"的去重问题
 4. **Learning-to-rank 个性化排序**：基于用户反馈训练排序模型，实现千人千面的信息流
 5. **实时突发事件告警**：对重大事件（融资、发布、政策变化）不等每日简报，即时推送飞书通知
+
+
+---
+
+## v0.2.1 Design Additions
+
+### Multi-platform Source Pool Architecture
+
+The system now maintains a structured source registry (`src/source_pool.yaml`) separate from the runtime collection config (`src/sources.yaml`). This allows:
+
+- Declaring sources across all platforms (YouTube, X, WeChat MP, RSS, websites, newsletters)
+- Tracking source status independently from collection capability
+- Planning expansion without breaking existing pipeline
+
+**Status model:**
+- `active`: collector exists and runs daily
+- `candidate`: high-value source identified, automation not yet built
+- `pending`: needs API access research or cost confirmation
+- `disabled`: temporarily paused
+
+**Why separate from sources.yaml:** The existing `sources.yaml` is tightly coupled to YouTube/RSS collectors. Changing its structure risks breaking the working pipeline. `source_pool.yaml` is the strategic registry; `sources.yaml` remains the runtime config.
+
+### Feedback Learning Loop (v0.2.1)
+
+**Stable item_id:**
+- `SHA1(url | title.lower() | published_at[:10])[:16]`
+- Same content always produces same ID across runs
+- Used as cross-module key: briefing JSON, Feishu buttons, feedback server, feedback storage
+
+**Structured briefing JSON:**
+- Saved to `data/briefings/briefing_YYYY-MM-DD.json`
+- Contains full item metadata for feedback server lookup
+- Enables future analytics without re-parsing Markdown
+
+**Feedback storage (JSON, not SQLite):**
+- MVP data volume is small, no concurrent writes
+- Structure: `{items: {}, events: [], preferences: {}}`
+- `items[item_id]`: latest metadata snapshot + reaction + comment
+- `events[]`: append-only history of all feedback actions
+- `preferences`: cumulative source/domain weights
+
+**Why JSON over SQLite:** Readability, zero-dependency, easy to demonstrate "feedback is really saved". SQLite is a v0.4 consideration when event volume exceeds ~500.
+
+**Learning mechanism:**
+- Filter: `get_item_adjustment(item)` adds bounded score adjustment [-25, +20]
+  - Exact item match: +8 (like) / -12 (dislike)
+  - Source/domain cumulative weight
+  - Title keyword overlap with historical liked/disliked items
+- Summarizer: `get_preference_context()` injects recent liked/disliked examples into prompt
+  - Explicitly constrained: "only adjust attention angle, not facts"
+  - Cannot override factual content rules
+
+**Why bounded adjustments:** Early feedback is sparse and potentially unrepresentative. Aggressive weighting from 3-5 reactions would cause filter oscillation. Bounded adjustments ensure base quality rules still dominate.
+
+### X / WeChat MP: Why Not Automated Yet
+
+- **X (Twitter):** API v2 Basic tier costs $100/month; rate limits are restrictive; account suspension risk. Need Vivian to confirm budget and priority.
+- **WeChat MP:** No official API for external reading. Options (WeChatFerry, RSS bridges, manual batch) all have reliability/compliance concerns. Marked as `pending` until access method is confirmed.
+
+### Deployment Direction (v0.3)
+
+Current friend-computer setup problems:
+- Unstable (sleep, reboot, network drops)
+- Code updates require manual re-clone
+- Environment drift between local and server
+- No proper backup for data/feedback.json
+
+Recommended v0.3: lightweight VPS in HK/SG/JP region for YouTube/X/API access compatibility. Systemd for process management, git pull for updates, Cloudflare named tunnel for stable feedback URL.

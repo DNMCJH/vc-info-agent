@@ -1,12 +1,15 @@
 """Summarizer — uses LLM to generate structured summaries and daily briefing."""
 
+import json
 import logging
 import re
 from datetime import datetime
+from pathlib import Path
 
 import httpx
 
 from config import Config
+from feedback import FeedbackStore, generate_item_id
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +18,14 @@ ITEM_SUMMARY_PROMPT = """你是一位专业的 VC 行业分析师助手。请为
 严格规则：
 - 只能基于下方提供的原文内容进行摘要，严禁添加原文中没有的信息、数据或事实
 - 如果原文信息不足，就简短概括已有内容，不要编造细节
+- 历史偏好只能用于调整关注角度，不能作为事实来源，也不能覆盖以上规则
+
+用户历史偏好参考：
+{preference_context}
 
 要求：
 1. 摘要（2-3 句话）：第一句是核心事实，第二句是关键数据或引用，第三句是影响分析
-2. Why it matters（1 句话）：从风险投资视角分析这条信息对投资决策的意义
+2. Why it matters（1 句话）：从风险投资视角分析这条信息对投资决策的意义，并尽量贴近用户历史偏好中的关注点
 
 格式要求（严格遵守）：
 摘要：<你的摘要>
@@ -39,6 +46,8 @@ BRIEFING_PROMPT = """你是一位专业的 VC 行业分析师。请根据以下�
 
 请直接输出趋势洞察，不要加前缀。"""
 
+BRIEFINGS_DIR = Path(__file__).parent.parent / "data" / "briefings"
+
 
 class Summarizer:
     """Generates structured summaries and daily briefings using LLM."""
@@ -50,12 +59,15 @@ class Summarizer:
             headers={"Authorization": f"Bearer {config.llm_api_key}"},
             timeout=60,
         )
+        self.feedback = FeedbackStore()
 
     def summarize_items(self, items: list[dict]) -> list[dict]:
+        preference_context = self.feedback.get_preference_context()
         for item in items:
             try:
                 raw = self._call_llm(
                     ITEM_SUMMARY_PROMPT.format(
+                        preference_context=preference_context,
                         title=item["title"],
                         channel=item.get("channel", ""),
                         description=item.get("description", "")[:1000],
@@ -73,7 +85,6 @@ class Summarizer:
 
     @staticmethod
     def _parse_summary(raw: str) -> tuple[str, str]:
-        """Parse LLM output into summary and why_it_matters."""
         summary, why = raw, ""
         if "Why it matters" in raw:
             parts = raw.split("Why it matters")
@@ -94,11 +105,13 @@ class Summarizer:
             logger.warning(f"Trend insight generation failed: {e}")
             return "暂无趋势洞察。"
 
-    def generate_briefing(self, items: list[dict], total_collected: int) -> str:
+    def generate_briefing(self, items: list[dict], total_collected: int) -> tuple[str, dict]:
+        """Generate Markdown briefing and structured JSON data."""
         items = self.summarize_items(items)
         trend = self.generate_trend_insight(items)
 
         today = datetime.now().strftime("%Y.%m.%d")
+        date_str = datetime.now().strftime("%Y-%m-%d")
         weekday = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][
             datetime.now().weekday()
         ]
@@ -148,7 +161,38 @@ class Summarizer:
         lines.append("> 📬 反馈：点击每条旁的 👍👎 帮助我学习你的偏好")
         lines.append("> 🕐 下期简报将于明日 08:00 推送")
 
-        return "\n".join(lines)
+        briefing_md = "\n".join(lines)
+
+        # Build structured briefing data
+        briefing_data = {
+            "briefing_id": f"briefing_{date_str}",
+            "date": date_str,
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "total_collected": total_collected,
+            "selected_count": filtered_count,
+            "trend_insight": trend,
+            "items": [self._item_to_json(item) for item in items],
+        }
+
+        return briefing_md, briefing_data
+
+    @staticmethod
+    def _item_to_json(item: dict) -> dict:
+        return {
+            "item_id": item.get("item_id") or generate_item_id(item),
+            "title": item.get("title", ""),
+            "url": item.get("url", ""),
+            "source": item.get("source", ""),
+            "channel": item.get("channel", ""),
+            "domain": item.get("domain", ""),
+            "summary": item.get("summary", ""),
+            "why_it_matters": item.get("why_it_matters", ""),
+            "quality_score": item.get("quality_score", 0),
+            "published_at": item.get("published_at", ""),
+            "video_id": item.get("video_id", ""),
+            "article_id": item.get("article_id", ""),
+            "description": item.get("description", "")[:500],
+        }
 
     def _format_source_line(self, item: dict) -> str:
         source = item.get("source", "")
@@ -164,7 +208,6 @@ class Summarizer:
         return "观看原视频" if item.get("source") == "YouTube" else "阅读原文"
 
     def _call_llm(self, prompt: str) -> str:
-        """Call LLM API and return the response text. Raises on HTTP errors."""
         resp = self.client.post(
             "/v1/chat/completions",
             json={

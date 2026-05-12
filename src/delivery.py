@@ -20,13 +20,13 @@ class FeishuDelivery:
     def __init__(self, config: Config):
         self.webhook_url = config.feishu_webhook
 
-    def send(self, briefing_md: str) -> bool:
+    def send(self, briefing_md: str, briefing_data: dict | None = None) -> bool:
         """Send briefing to Feishu via interactive card message."""
         if not self.webhook_url:
             logger.info("Feishu webhook not configured, skipping push")
             return False
 
-        card = self._build_card(briefing_md)
+        card = self._build_card(briefing_md, briefing_data)
         payload = {"msg_type": "interactive", "card": card}
 
         try:
@@ -43,11 +43,14 @@ class FeishuDelivery:
             logger.warning(f"Feishu push failed: {e}")
             return False
 
-    def _build_card(self, md: str) -> dict:
+    def _build_card(self, md: str, briefing_data: dict | None = None) -> dict:
         elements = []
         lines = md.split("\n")
         i = 0
         item_idx = 0
+
+        # Build a lookup from item index to stable item_id
+        data_items = (briefing_data or {}).get("items", [])
 
         while i < len(lines):
             line = lines[i].strip()
@@ -94,12 +97,15 @@ class FeishuDelivery:
                     "content": "\n".join(block_lines),
                 })
 
-                # Add feedback buttons
-                item_idx += 1
-                clean_title = re.sub(r"^\d+\.\s*", "", title)
-                encoded_title = quote(clean_title[:50])
-                like_url = f"{FEEDBACK_BASE}/feedback?id={item_idx}&r=like&t={encoded_title}"
-                dislike_url = f"{FEEDBACK_BASE}/feedback?id={item_idx}&r=dislike&t={encoded_title}"
+                # Use stable item_id from briefing_data when available
+                if item_idx < len(data_items):
+                    stable_id = data_items[item_idx].get("item_id", str(item_idx + 1))
+                else:
+                    stable_id = str(item_idx + 1)
+
+                like_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=like"
+                dislike_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=dislike"
+
                 elements.append({
                     "tag": "action",
                     "actions": [
@@ -117,6 +123,7 @@ class FeishuDelivery:
                         },
                     ],
                 })
+                item_idx += 1
                 continue
 
             text = re.sub(r"\*\*([^*]+)\*\*", r"**\1**", line)

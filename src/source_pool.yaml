@@ -1,0 +1,543 @@
+# VC Info Agent — Multi-platform Source Pool
+# status: active = currently collected | candidate = important but not yet automated | pending = needs API/access research | disabled = paused
+# priority: P0 = must-have daily | P1 = important weekly | P2 = nice-to-have
+# category: research_pioneer | power_center | builder_practitioner | educator_curator | ethics_safety | cn_media | vc_startup
+
+source_pool:
+  # ===== P0: Core AI Power Centers =====
+  - source_id: openai_blog
+    name: OpenAI
+    platform: rss
+    url: "https://openai.com/blog/rss.xml"
+    category: power_center
+    cognitive_role: "OpenAI product launches, model releases, AGI strategy"
+    priority: P0
+    language: en
+    source_type: company
+    access_method: rss
+    status: active
+
+  - source_id: x_sama
+    name: Sam Altman
+    platform: x
+    handle: "@sama"
+    url: "https://x.com/sama"
+    category: power_center
+    cognitive_role: "OpenAI strategy, AGI direction, product signals"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: anthropic_blog
+    name: Anthropic
+    platform: rss
+    url: "https://www.anthropic.com/research/rss.xml"
+    category: power_center
+    cognitive_role: "AI safety research, Claude model updates, alignment"
+    priority: P0
+    language: en
+    source_type: company
+    access_method: rss
+    status: active
+
+  - source_id: x_daboramodei
+    name: Dario Amodei
+    platform: x
+    handle: "@DarioAmodei"
+    url: "https://x.com/DarioAmodei"
+    category: power_center
+    cognitive_role: "Anthropic strategy, AI safety, scaling laws"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: nvidia_newsroom
+    name: NVIDIA Newsroom
+    platform: rss
+    url: "https://nvidianews.nvidia.com/releases.xml"
+    category: power_center
+    cognitive_role: "GPU/AI infra launches, earnings, partnerships"
+    priority: P0
+    language: en
+    source_type: company
+    access_method: rss
+    status: active
+
+  - source_id: x_jensen_huang
+    name: Jensen Huang
+    platform: x
+    handle: "@nvidia"
+    url: "https://x.com/nvidia"
+    category: power_center
+    cognitive_role: "NVIDIA strategy, AI compute, GTC announcements"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: deepmind_blog
+    name: Google DeepMind
+    platform: rss
+    url: "https://deepmind.google/blog/rss.xml"
+    category: power_center
+    cognitive_role: "Frontier research, Gemini, AlphaFold, scientific AI"
+    priority: P0
+    language: en
+    source_type: company
+    access_method: rss
+    status: active
+
+  - source_id: x_demishassabis
+    name: Demis Hassabis
+    platform: x
+    handle: "@demaboris"
+    url: "https://x.com/demaboris"
+    category: power_center
+    cognitive_role: "DeepMind direction, AGI philosophy, Nobel-level AI science"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  # ===== P0: Builders & Practitioners =====
+  - source_id: youtube_karpathy
+    name: Andrej Karpathy
+    platform: youtube
+    handle: "@AndrejKarpathy"
+    url: "https://www.youtube.com/@AndrejKarpathy"
+    category: builder_practitioner
+    cognitive_role: "LLM engineering, AI education, developer practice"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: youtube_api
+    status: active
+
+  - source_id: x_karpathy
+    name: Andrej Karpathy
+    platform: x
+    handle: "@karpathy"
+    url: "https://x.com/karpathy"
+    category: builder_practitioner
+    cognitive_role: "LLM insights, AI engineering hot takes"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: langchain_blog
+    name: LangChain
+    platform: rss
+    url: "https://blog.langchain.dev/rss/"
+    category: builder_practitioner
+    cognitive_role: "LLM app frameworks, agent patterns, RAG"
+    priority: P0
+    language: en
+    source_type: company
+    access_method: rss
+    status: active
+
+  - source_id: x_hwchase17
+    name: Harrison Chase
+    platform: x
+    handle: "@hwchase17"
+    url: "https://x.com/hwchase17"
+    category: builder_practitioner
+    cognitive_role: "LangChain/LangGraph, agent architecture, LLM tooling"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: huggingface_blog
+    name: Hugging Face
+    platform: rss
+    url: "https://huggingface.co/blog/feed.xml"
+    category: builder_practitioner
+    cognitive_role: "Open-source models, datasets, ML democratization"
+    priority: P0
+    language: en
+    source_type: company
+    access_method: rss
+    status: active
+
+  - source_id: x_thomaswolf
+    name: Thomas Wolf
+    platform: x
+    handle: "@Thom_Wolf"
+    url: "https://x.com/Thom_Wolf"
+    category: builder_practitioner
+    cognitive_role: "HuggingFace strategy, open-source AI ecosystem"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  # ===== P0: Educators & Curators =====
+  - source_id: rundown_ai
+    name: The Rundown AI
+    platform: rss
+    url: "https://www.therundown.ai/feed"
+    category: educator_curator
+    cognitive_role: "Daily AI news digest, product launches, industry moves"
+    priority: P0
+    language: en
+    source_type: media
+    access_method: rss
+    status: active
+
+  - source_id: x_rowancheung
+    name: Rowan Cheung
+    platform: x
+    handle: "@rowancheung"
+    url: "https://x.com/rowancheung"
+    category: educator_curator
+    cognitive_role: "AI news curation, tool discovery, trend signals"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: lilianweng_blog
+    name: Lilian Weng
+    platform: website
+    url: "https://lilianweng.github.io/"
+    category: educator_curator
+    cognitive_role: "Deep technical surveys, LLM internals, research synthesis"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: rss
+    status: active
+
+  - source_id: deeplearning_ai
+    name: Andrew Ng / The Batch
+    platform: rss
+    url: "https://www.deeplearning.ai/the-batch/feed/"
+    category: educator_curator
+    cognitive_role: "AI industry weekly, education, practical ML"
+    priority: P0
+    language: en
+    source_type: person
+    access_method: rss
+    status: active
+
+  # ===== P1: Extended Power Centers =====
+  - source_id: x_elonmusk
+    name: Elon Musk
+    platform: x
+    handle: "@elonmusk"
+    url: "https://x.com/elonmusk"
+    category: power_center
+    cognitive_role: "xAI/Grok, Tesla AI, compute infrastructure"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_sundarpichai
+    name: Sundar Pichai
+    platform: x
+    handle: "@sundaborichai"
+    url: "https://x.com/sundaborichai"
+    category: power_center
+    cognitive_role: "Google AI strategy, Gemini, Search AI"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_satyanadella
+    name: Satya Nadella
+    platform: x
+    handle: "@sataboradella"
+    url: "https://x.com/sataboradella"
+    category: power_center
+    cognitive_role: "Microsoft AI strategy, Copilot, Azure AI"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_ilyasut
+    name: Ilya Sutskever
+    platform: x
+    handle: "@ilyasut"
+    url: "https://x.com/ilyasut"
+    category: research_pioneer
+    cognitive_role: "SSI, superintelligence safety, foundational research"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_zaborck
+    name: Mark Zuckerberg
+    platform: x
+    handle: "@faborck"
+    url: "https://x.com/faborck"
+    category: power_center
+    cognitive_role: "Meta AI, Llama open-source, AR/VR AI"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_mustafasul
+    name: Mustafa Suleyman
+    platform: x
+    handle: "@mustaborasul"
+    url: "https://x.com/mustaborasul"
+    category: power_center
+    cognitive_role: "Microsoft AI, conversational AI, AI ethics"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_alexandrwang
+    name: Alexandr Wang
+    platform: x
+    handle: "@alexandr_wang"
+    url: "https://x.com/alexandr_wang"
+    category: power_center
+    cognitive_role: "Scale AI, data labeling, enterprise AI"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_lisasu
+    name: Lisa Su
+    platform: x
+    handle: "@LisaSu"
+    url: "https://x.com/LisaSu"
+    category: power_center
+    cognitive_role: "AMD AI chips, GPU competition, AI hardware"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  # ===== P1: Research Pioneers =====
+  - source_id: x_ylecun
+    name: Yann LeCun
+    platform: x
+    handle: "@ylecun"
+    url: "https://x.com/ylecun"
+    category: research_pioneer
+    cognitive_role: "Meta AI research, self-supervised learning, AGI debate"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_yoshuabengio
+    name: Yoshua Bengio
+    platform: x
+    handle: "@yoshuaborengio"
+    url: "https://x.com/yoshuaborengio"
+    category: research_pioneer
+    cognitive_role: "AI safety, GFlowNets, responsible AI"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_drfeifei
+    name: Fei-Fei Li
+    platform: x
+    handle: "@drfeifei"
+    url: "https://x.com/drfeifei"
+    category: research_pioneer
+    cognitive_role: "Spatial intelligence, World Labs, AI for science"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  # ===== P1: Builders & Educators =====
+  - source_id: youtube_lexfridman
+    name: Lex Fridman
+    platform: youtube
+    handle: "@lexfridman"
+    url: "https://www.youtube.com/@lexfridman"
+    category: educator_curator
+    cognitive_role: "Long-form AI interviews, industry leaders, philosophy"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: youtube_api
+    status: active
+
+  - source_id: x_jimfan
+    name: Jim Fan
+    platform: x
+    handle: "@DrJimFan"
+    url: "https://x.com/DrJimFan"
+    category: builder_practitioner
+    cognitive_role: "NVIDIA embodied AI, foundation agents, robotics"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_aaboravind
+    name: Aravind Srinivas
+    platform: x
+    handle: "@AravSrinivas"
+    url: "https://x.com/AravSrinivas"
+    category: builder_practitioner
+    cognitive_role: "Perplexity AI, search + LLM, product-market fit"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  # ===== P1: Ethics & Safety =====
+  - source_id: x_garyaborarcus
+    name: Gary Marcus
+    platform: x
+    handle: "@GaryMarcus"
+    url: "https://x.com/GaryMarcus"
+    category: ethics_safety
+    cognitive_role: "AI criticism, hype check, reliability concerns"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_tegmark
+    name: Max Tegmark
+    platform: x
+    handle: "@tegmark"
+    url: "https://x.com/tegmark"
+    category: ethics_safety
+    cognitive_role: "AI existential risk, Future of Life Institute"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: x_stuartaborussell
+    name: Stuart Russell
+    platform: x
+    handle: "@StuartJRussell"
+    url: "https://x.com/StuartJRussell"
+    category: ethics_safety
+    cognitive_role: "AI alignment theory, human-compatible AI"
+    priority: P1
+    language: en
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  # ===== Chinese Media / 公众号 (Candidate) =====
+  - source_id: mp_jiqizhixin
+    name: 机器之心
+    platform: wechat_mp
+    url: "https://mp.weixin.qq.com"
+    category: cn_media
+    cognitive_role: "中文 AI 深度报道、论文解读、产业分析"
+    priority: P1
+    language: zh
+    source_type: media
+    access_method: pending
+    status: candidate
+
+  - source_id: mp_liangziwei
+    name: 量子位
+    platform: wechat_mp
+    url: "https://mp.weixin.qq.com"
+    category: cn_media
+    cognitive_role: "中文 AI 快讯、产品评测、行业动态"
+    priority: P1
+    language: zh
+    source_type: media
+    access_method: pending
+    status: candidate
+
+  - source_id: mp_36kr
+    name: 36氪
+    platform: wechat_mp
+    url: "https://36kr.com"
+    category: vc_startup
+    cognitive_role: "创投新闻、融资动态、创业公司报道"
+    priority: P1
+    language: zh
+    source_type: media
+    access_method: rss
+    status: candidate
+
+  - source_id: mp_founderpark
+    name: Founder Park
+    platform: wechat_mp
+    url: "https://mp.weixin.qq.com"
+    category: vc_startup
+    cognitive_role: "极客公园旗下，AI 创业深度访谈"
+    priority: P1
+    language: zh
+    source_type: media
+    access_method: pending
+    status: candidate
+
+  - source_id: mp_jiaziguangnian
+    name: 甲子光年
+    platform: wechat_mp
+    url: "https://mp.weixin.qq.com"
+    category: vc_startup
+    cognitive_role: "科技产业深度研究、投资趋势"
+    priority: P1
+    language: zh
+    source_type: media
+    access_method: pending
+    status: candidate
+
+  - source_id: mp_zoomzoe
+    name: ZoomZoe
+    platform: wechat_mp
+    url: "https://mp.weixin.qq.com"
+    category: educator_curator
+    cognitive_role: "AI 工具评测、效率提升、中文 AI 社区"
+    priority: P1
+    language: zh
+    source_type: person
+    access_method: pending
+    status: candidate
+
+  - source_id: mp_vivian_ai
+    name: Vivian的AI进化论
+    platform: wechat_mp
+    url: "https://mp.weixin.qq.com"
+    category: vc_startup
+    cognitive_role: "VC 视角 AI 投资、行业洞察"
+    priority: P1
+    language: zh
+    source_type: person
+    access_method: pending
+    status: candidate

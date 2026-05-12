@@ -3,6 +3,7 @@ VC Info Agent — main entry point.
 Runs the full pipeline: collect → filter → summarize → deliver.
 """
 
+import json
 import logging
 import sys
 from datetime import datetime
@@ -14,12 +15,15 @@ from rss_collector import RSSCollector
 from filter import ContentFilter
 from summarizer import Summarizer
 from delivery import FeishuDelivery
+from feedback import generate_item_id
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+BRIEFINGS_DIR = Path(__file__).parent.parent / "data" / "briefings"
 
 
 def main():
@@ -67,30 +71,46 @@ def main():
         content_filter = ContentFilter(config)
         filtered_items = content_filter.filter(all_items)
 
+    # Assign stable item_id to each selected item
+    for item in filtered_items:
+        if not item.get("item_id"):
+            item["item_id"] = generate_item_id(item)
+
     # Step 3: Summarize and generate briefing
     logger.info("Step 3/4: Generating briefing with LLM...")
     summarizer = Summarizer(config)
     try:
-        briefing = summarizer.generate_briefing(filtered_items, total_collected)
+        briefing_md, briefing_data = summarizer.generate_briefing(
+            filtered_items, total_collected
+        )
     finally:
         summarizer.close()
 
-    # Step 4: Output and deliver
+    # Step 4: Output
     output_dir = Path(__file__).parent.parent / "sample_output"
     output_dir.mkdir(exist_ok=True)
     date_str = datetime.now().strftime("%Y-%m-%d")
     output_path = output_dir / f"briefing_{date_str}.md"
-    output_path.write_text(briefing, encoding="utf-8")
-    logger.info(f"Briefing saved to {output_path}")
+    output_path.write_text(briefing_md, encoding="utf-8")
+    logger.info(f"Markdown briefing saved to {output_path}")
 
-    # Push to Feishu if configured
+    # Save structured JSON briefing
+    BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
+    json_path = BRIEFINGS_DIR / f"briefing_{date_str}.json"
+    json_path.write_text(
+        json.dumps(briefing_data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    logger.info(f"JSON briefing saved to {json_path}")
+
+    # Step 5: Deliver
     logger.info("Step 4/4: Delivering briefing...")
     delivery = FeishuDelivery(config)
-    delivery.send(briefing)
+    delivery.send(briefing_md, briefing_data)
 
     logger.info("=== VC Info Agent finished ===")
     print(f"\n{'=' * 60}")
     print(f"Briefing generated: {output_path}")
+    print(f"JSON data: {json_path}")
     print(f"{'=' * 60}")
 
 

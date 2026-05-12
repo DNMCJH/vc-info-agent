@@ -46,7 +46,7 @@ class ContentFilter:
         else:
             score += 5
 
-        # Content length (15%) — duration for YouTube, description length for RSS
+        # Content length (15%)
         if item.get("source") == "YouTube":
             duration_str = item.get("duration", "PT0S")
             minutes = self._parse_duration_minutes(duration_str)
@@ -65,7 +65,7 @@ class ContentFilter:
             elif desc_len >= 200:
                 score += 5
 
-        # Engagement (20%) — RSS gets authority-based compensation
+        # Engagement (20%)
         likes = item.get("likes", 0)
         comments = item.get("comments", 0)
         engagement = likes + comments * 2
@@ -81,7 +81,7 @@ class ContentFilter:
         else:
             score += 3
 
-        # Keyword relevance (20%) — use domain_keywords from config
+        # Keyword relevance (20%)
         text = f"{item.get('title', '')} {item.get('description', '')}".lower()
         all_keywords = []
         for kws in self.config.domain_keywords.values():
@@ -112,10 +112,8 @@ class ContentFilter:
         if re.search(r"bit\.ly|utm_|affiliate", text):
             score -= 15
 
-        # Feedback preference adjustment
-        source_weight = self.feedback.get_source_weight(item.get("channel", ""))
-        domain_weight = self.feedback.get_domain_weight(item.get("domain", ""))
-        score += int(source_weight * 3 + domain_weight * 2)
+        # Historical feedback adjustment (replaces old shallow source/domain weight)
+        score += self.feedback.get_item_adjustment(item)
 
         return max(score, 0)
 
