@@ -17,13 +17,12 @@ TIKHUB_TOKEN = os.getenv("TIKHUB_API_KEY", "")
 WECHAT_ACCOUNTS = {
     "gh_94dba26f8ca0": ("数字生命卡兹克", "AI"),
     "gh_61591937120a": ("暗涌Waves", "AI"),
-    # Add more accounts here as ghids are discovered:
-    # "gh_xxx": ("晚点LatePost", "AI"),
-    # "gh_xxx": ("甲子光年", "AI"),
-    # "gh_xxx": ("半导体行业观察", "芯片"),
-    # "gh_xxx": ("集微网", "芯片"),
-    # "gh_xxx": ("高工机器人", "机器人"),
-    # "gh_xxx": ("极客公园", "AI"),
+    "postlate": ("晚点LatePost", "AI"),
+    "jazzyear": ("甲子光年", "AI"),
+    "icbank": ("半导体行业观察", "芯片"),
+    "jiweinet": ("集微网", "芯片"),
+    "gaogongrobot": ("高工机器人", "机器人"),
+    "geekpark": ("极客公园", "AI"),
 }
 
 
