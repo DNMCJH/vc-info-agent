@@ -94,6 +94,24 @@ rss_feeds:
     domains: [AI]
     authority: high
 
+  - url: https://www.reddit.com/r/MachineLearning/hot/.rss
+    name: Reddit r/MachineLearning
+    lang: en
+    domains: [AI]
+    authority: medium
+
+  - url: https://www.reddit.com/r/artificial/hot/.rss
+    name: Reddit r/artificial
+    lang: en
+    domains: [AI]
+    authority: medium
+
+  - url: https://www.reddit.com/r/LocalLLaMA/hot/.rss
+    name: Reddit r/LocalLLaMA
+    lang: en
+    domains: [AI]
+    authority: medium
+
 # KOL 白名单 — 这些来源在质量评分中获得加分
 kol_whitelist:
   - AI Explained
