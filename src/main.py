@@ -13,6 +13,7 @@ from config import Config
 from collector import YouTubeCollector
 from rss_collector import RSSCollector
 from twitter_collector import TwitterCollector
+from wechat_collector import WechatCollector
 from filter import ContentFilter
 from summarizer import Summarizer
 from delivery import FeishuDelivery
@@ -57,6 +58,11 @@ def main():
     twitter_collector = TwitterCollector(config)
     twitter_items = twitter_collector.collect()
     all_items.extend(twitter_items)
+
+    logger.info("Step 1d: Collecting from WeChat...")
+    wechat_collector = WechatCollector(config)
+    wechat_items = wechat_collector.collect()
+    all_items.extend(wechat_items)
 
     total_collected = len(all_items)
     logger.info(f"Total collected: {total_collected} items")
