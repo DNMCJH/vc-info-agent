@@ -23,6 +23,7 @@ WECHAT_ACCOUNTS = {
     "jiweinet": ("集微网", "芯片"),
     "gaogongrobot": ("高工机器人", "机器人"),
     "geekpark": ("极客公园", "AI"),
+    "SerendipperShine": ("SerendipperShine", "AI"),
 }
 
 
