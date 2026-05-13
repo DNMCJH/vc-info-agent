@@ -96,8 +96,8 @@ class FeishuDelivery:
                 if item_idx < len(data_items):
                     pub_at = data_items[item_idx].get("published_at", "")
                     if pub_at:
-                        pub_date = pub_at[:10]  # YYYY-MM-DD
-                        block_lines.append(f"🕐 {pub_date}")
+                        pub_display = pub_at[:16].replace("T", " ")  # YYYY-MM-DD HH:MM
+                        block_lines.append(f"🕐 {pub_display}")
 
                 elements.append({
                     "tag": "markdown",
