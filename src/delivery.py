@@ -3,6 +3,7 @@
 import logging
 import os
 import re
+from datetime import datetime, timezone, timedelta
 from urllib.parse import quote
 
 import httpx
@@ -12,6 +13,7 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 FEEDBACK_BASE = os.getenv("FEEDBACK_BASE_URL", "http://localhost:9002")
+_BEIJING = timezone(timedelta(hours=8))
 
 
 class FeishuDelivery:
@@ -96,7 +98,12 @@ class FeishuDelivery:
                 if item_idx < len(data_items):
                     pub_at = data_items[item_idx].get("published_at", "")
                     if pub_at:
-                        pub_display = pub_at[:16].replace("T", " ")  # YYYY-MM-DD HH:MM
+                        try:
+                            dt = datetime.fromisoformat(pub_at.replace("Z", "+00:00"))
+                            dt_bj = dt.astimezone(_BEIJING)
+                            pub_display = dt_bj.strftime("%Y-%m-%d %H:%M")
+                        except (ValueError, TypeError):
+                            pub_display = pub_at[:16].replace("T", " ")
                         block_lines.append(f"🕐 {pub_display}")
 
                 elements.append({
