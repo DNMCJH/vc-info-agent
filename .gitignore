@@ -8,3 +8,7 @@ dist/
 build/
 .idea/
 .vscode/
+
+# Runtime data (feedback, briefings, logs)
+data/
+sample_output/
