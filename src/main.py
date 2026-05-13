@@ -12,6 +12,7 @@ from pathlib import Path
 from config import Config
 from collector import YouTubeCollector
 from rss_collector import RSSCollector
+from twitter_collector import TwitterCollector
 from filter import ContentFilter
 from summarizer import Summarizer
 from delivery import FeishuDelivery
@@ -51,6 +52,11 @@ def main():
     rss_collector = RSSCollector(config)
     rss_items = rss_collector.collect()
     all_items.extend(rss_items)
+
+    logger.info("Step 1c: Collecting from Twitter...")
+    twitter_collector = TwitterCollector(config)
+    twitter_items = twitter_collector.collect()
+    all_items.extend(twitter_items)
 
     total_collected = len(all_items)
     logger.info(f"Total collected: {total_collected} items")

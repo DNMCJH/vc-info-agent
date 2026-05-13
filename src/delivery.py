@@ -92,6 +92,13 @@ class FeishuDelivery:
                     block_lines.append(next_line)
                     i += 1
 
+                # Append publish time if available
+                if item_idx < len(data_items):
+                    pub_at = data_items[item_idx].get("published_at", "")
+                    if pub_at:
+                        pub_date = pub_at[:10]  # YYYY-MM-DD
+                        block_lines.append(f"🕐 {pub_date}")
+
                 elements.append({
                     "tag": "markdown",
                     "content": "\n".join(block_lines),

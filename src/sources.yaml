@@ -39,6 +39,10 @@ youtube_channels:
   UCXZCJLdBC09xxGZ6gcdrc6A: AI        # OpenAI
   UCP7jMXSY2xbc3KCAE0MHQ-A: AI        # Google DeepMind
   UCrDwWp7EBBv4NwvScIpBDOA: AI        # Anthropic
+  UCWN3xxRkmTPphiiT85nO_A: AI         # Andrej Karpathy
+  UCSHZKyawb7irstQKVo4z0jw: AI        # Lex Fridman
+  UCYO_jab_esuFRV4b17AJtAw: AI        # 3Blue1Brown
+  UCcIXc5mJsHVYTZR1maL5l9w: AI        # Andrew Ng (DeepLearning.AI)
 
 # RSS 信息源
 rss_feeds:
@@ -84,6 +88,12 @@ rss_feeds:
     domains: [AI]
     authority: high
 
+  - url: https://lilianweng.github.io/index.xml
+    name: Lilian Weng Blog
+    lang: en
+    domains: [AI]
+    authority: high
+
 # KOL 白名单 — 这些来源在质量评分中获得加分
 kol_whitelist:
   - AI Explained
@@ -104,6 +114,22 @@ kol_whitelist:
   - 量子位
   - 机器之心
   - 36氪
+  - Andrej Karpathy
+  - Lex Fridman
+  - Andrew Ng
+  - 3Blue1Brown
+  - Sam Altman
+  - Dario Amodei
+  - Jensen Huang
+  - Ilya Sutskever
+  - Jim Fan
+  - Demis Hassabis
+  - Harrison Chase
+  - Aravind Srinivas
+  - Alexandr Wang
+  - Rowan Cheung
+  - Lilian Weng
+  - Lisa Su
 
 # 领域关键词 — 用于内容相关性评分和 RSS 文章分类
 domain_keywords:
