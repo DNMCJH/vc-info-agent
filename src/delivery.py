@@ -51,22 +51,14 @@ class FeishuDelivery:
         data_items = data.get("items", [])
         elements = []
 
-        # Header stats
-        total = data.get("total_collected", 0)
-        selected = data.get("selected_count", 0)
-        elements.append({
-            "tag": "markdown",
-            "content": f"采集 {total} 条，精选 {selected} 条",
-        })
-
-        # TL;DR section
+        # TL;DR section at top
         tldr = data.get("tldr", "")
         if tldr:
-            elements.append({"tag": "hr"})
             elements.append({
                 "tag": "markdown",
                 "content": f"**⚡ 速览**\n{tldr}",
             })
+            elements.append({"tag": "hr"})
 
         # Group items by domain
         domain_items: dict[str, list[dict]] = {}
@@ -81,7 +73,6 @@ class FeishuDelivery:
             if not d_items:
                 continue
 
-            elements.append({"tag": "hr"})
             emoji = domain_emoji.get(domain, "📌")
             elements.append({
                 "tag": "markdown",
@@ -89,7 +80,6 @@ class FeishuDelivery:
             })
 
             for item in d_items:
-                # Item content block with background color
                 source_icon = "📺" if item.get("source") == "YouTube" else "📝"
                 channel = item.get("channel", "")
                 summary = item.get("summary", "")
@@ -97,8 +87,11 @@ class FeishuDelivery:
                 url = item.get("url", "")
                 link_text = "观看原视频" if item.get("source") == "YouTube" else "阅读原文"
 
-                content_lines = [f"**{idx}. {item.get('title', '')}**"]
-                content_lines.append(f"{source_icon} {channel}")
+                # Compact item block
+                content_lines = [
+                    f"**{idx}. {item.get('title', '')}**",
+                    f"{source_icon} {channel}",
+                ]
                 if summary:
                     content_lines.append(summary)
                 if why:
@@ -106,30 +99,9 @@ class FeishuDelivery:
                 if url:
                     content_lines.append(f"[🔗 {link_text}]({url})")
 
-                # Publish time
-                pub_at = item.get("published_at", "")
-                if pub_at:
-                    try:
-                        dt = datetime.fromisoformat(pub_at.replace("Z", "+00:00"))
-                        dt_bj = dt.astimezone(_BEIJING)
-                        content_lines.append(f"🕐 {dt_bj.strftime('%Y-%m-%d %H:%M')}")
-                    except (ValueError, TypeError):
-                        pass
-
-                # Use column_set with subtle background for visual grouping
                 elements.append({
-                    "tag": "column_set",
-                    "flex_mode": "none",
-                    "background_style": "rgba(246,248,250,1)",
-                    "columns": [{
-                        "tag": "column",
-                        "width": "weighted",
-                        "weight": 1,
-                        "elements": [{
-                            "tag": "markdown",
-                            "content": "\n".join(content_lines),
-                        }],
-                    }],
+                    "tag": "markdown",
+                    "content": "\n".join(content_lines),
                 })
 
                 # Feedback buttons
@@ -142,13 +114,13 @@ class FeishuDelivery:
                     "actions": [
                         {
                             "tag": "button",
-                            "text": {"tag": "plain_text", "content": "👍 有用"},
+                            "text": {"tag": "plain_text", "content": "👍"},
                             "type": "primary",
                             "url": like_url,
                         },
                         {
                             "tag": "button",
-                            "text": {"tag": "plain_text", "content": "👎 不想看"},
+                            "text": {"tag": "plain_text", "content": "👎"},
                             "type": "default",
                             "url": dislike_url,
                         },
@@ -156,18 +128,22 @@ class FeishuDelivery:
                 })
                 idx += 1
 
-        # Trend insight
+            elements.append({"tag": "hr"})
+
+        # Trend insight at bottom
         trend = data.get("trend_insight", "")
         if trend:
-            elements.append({"tag": "hr"})
             elements.append({
                 "tag": "markdown",
                 "content": f"💡 **趋势洞察**\n{trend}",
             })
 
+        # Stats footer
+        total = data.get("total_collected", 0)
+        selected = data.get("selected_count", 0)
         elements.append({
             "tag": "note",
-            "elements": [{"tag": "plain_text", "content": "📬 点击按钮反馈，帮助系统学习你的偏好"}],
+            "elements": [{"tag": "plain_text", "content": f"📊 采集 {total} → 精选 {selected} · 点击按钮帮助系统学习偏好"}],
         })
 
         title = "📋 VC 每日简报"
@@ -178,7 +154,7 @@ class FeishuDelivery:
         return {
             "header": {
                 "title": {"tag": "plain_text", "content": title},
-                "template": "blue",
+                "template": "indigo",
             },
             "elements": elements,
         }
