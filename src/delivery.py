@@ -67,9 +67,9 @@ class FeishuDelivery:
 
         domain_emoji = {"AI": "🤖", "芯片": "🔬", "机器人": "🦾"}
         domain_bg = {
-            "AI": "wathet",
-            "芯片": "lime",
-            "机器人": "purple",
+            "AI": "blue-50",
+            "芯片": "green-50",
+            "机器人": "violet-50",
         }
         idx = 1
 
