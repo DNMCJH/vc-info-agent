@@ -67,9 +67,9 @@ class FeishuDelivery:
 
         domain_emoji = {"AI": "🤖", "芯片": "🔬", "机器人": "🦾"}
         domain_bg = {
-            "AI": "rgba(0,100,255,0.04)",
-            "芯片": "rgba(0,180,150,0.04)",
-            "机器人": "rgba(130,80,220,0.04)",
+            "AI": "rgba(219,234,254,1)",
+            "芯片": "rgba(220,252,231,1)",
+            "机器人": "rgba(237,233,254,1)",
         }
         idx = 1
 
@@ -84,9 +84,8 @@ class FeishuDelivery:
                 "content": f"**{emoji} {domain}（{len(d_items)}）**",
             })
 
-            # Build all items in this domain as column elements
-            domain_elements = []
-            item_feedback = []
+            bg = domain_bg.get(domain, "rgba(243,244,246,1)")
+
             for item in d_items:
                 source_icon = "📺" if item.get("source") == "YouTube" else "📝"
                 channel = item.get("channel", "")
@@ -106,27 +105,38 @@ class FeishuDelivery:
                 if url:
                     content_lines.append(f"[🔗 {link_text}]({url})")
 
-                domain_elements.append({
-                    "tag": "markdown",
-                    "content": "\n".join(content_lines),
+                # Each item in its own color block
+                elements.append({
+                    "tag": "column_set",
+                    "flex_mode": "none",
+                    "background_style": bg,
+                    "columns": [{
+                        "tag": "column",
+                        "width": "weighted",
+                        "weight": 1,
+                        "elements": [{
+                            "tag": "markdown",
+                            "content": "\n".join(content_lines),
+                        }],
+                    }],
                 })
 
-                # Collect feedback buttons (cannot be inside column_set)
+                # Feedback buttons right after the item
                 stable_id = item.get("item_id", str(idx))
                 like_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=like"
                 dislike_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=dislike"
-                item_feedback.append({
+                elements.append({
                     "tag": "action",
                     "actions": [
                         {
                             "tag": "button",
-                            "text": {"tag": "plain_text", "content": f"👍 {idx}"},
+                            "text": {"tag": "plain_text", "content": "👍 有用"},
                             "type": "primary",
                             "url": like_url,
                         },
                         {
                             "tag": "button",
-                            "text": {"tag": "plain_text", "content": f"👎 {idx}"},
+                            "text": {"tag": "plain_text", "content": "👎 不想看"},
                             "type": "default",
                             "url": dislike_url,
                         },
@@ -134,25 +144,9 @@ class FeishuDelivery:
                 })
                 idx += 1
 
-            # Wrap entire domain in a colored column_set
-            bg = domain_bg.get(domain, "rgba(0,0,0,0.03)")
-            elements.append({
-                "tag": "column_set",
-                "flex_mode": "none",
-                "background_style": bg,
-                "columns": [{
-                    "tag": "column",
-                    "width": "weighted",
-                    "weight": 1,
-                    "elements": domain_elements,
-                }],
-            })
-
-            # Feedback buttons outside column_set
-            elements.extend(item_feedback)
+            elements.append({"tag": "hr"})
 
         # Trend insight
-        elements.append({"tag": "hr"})
         trend = data.get("trend_insight", "")
         if trend:
             elements.append({
