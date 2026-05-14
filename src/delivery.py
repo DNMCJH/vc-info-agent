@@ -66,6 +66,11 @@ class FeishuDelivery:
             domain_items.setdefault(item.get("domain", "other"), []).append(item)
 
         domain_emoji = {"AI": "🤖", "芯片": "🔬", "机器人": "🦾"}
+        domain_bg = {
+            "AI": "rgba(0,100,255,0.04)",
+            "芯片": "rgba(0,180,150,0.04)",
+            "机器人": "rgba(130,80,220,0.04)",
+        }
         idx = 1
 
         for domain in ["AI", "芯片", "机器人"]:
@@ -79,6 +84,8 @@ class FeishuDelivery:
                 "content": f"**{emoji} {domain}（{len(d_items)}）**",
             })
 
+            # Build all items in this domain as column elements
+            domain_elements = []
             for item in d_items:
                 source_icon = "📺" if item.get("source") == "YouTube" else "📝"
                 channel = item.get("channel", "")
@@ -87,7 +94,6 @@ class FeishuDelivery:
                 url = item.get("url", "")
                 link_text = "观看原视频" if item.get("source") == "YouTube" else "阅读原文"
 
-                # Compact item block
                 content_lines = [
                     f"**{idx}. {item.get('title', '')}**",
                     f"{source_icon} {channel}",
@@ -99,7 +105,7 @@ class FeishuDelivery:
                 if url:
                     content_lines.append(f"[🔗 {link_text}]({url})")
 
-                elements.append({
+                domain_elements.append({
                     "tag": "markdown",
                     "content": "\n".join(content_lines),
                 })
@@ -108,8 +114,7 @@ class FeishuDelivery:
                 stable_id = item.get("item_id", str(idx))
                 like_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=like"
                 dislike_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=dislike"
-
-                elements.append({
+                domain_elements.append({
                     "tag": "action",
                     "actions": [
                         {
@@ -128,9 +133,22 @@ class FeishuDelivery:
                 })
                 idx += 1
 
-            elements.append({"tag": "hr"})
+            # Wrap entire domain in a colored column_set
+            bg = domain_bg.get(domain, "rgba(0,0,0,0.03)")
+            elements.append({
+                "tag": "column_set",
+                "flex_mode": "none",
+                "background_style": bg,
+                "columns": [{
+                    "tag": "column",
+                    "width": "weighted",
+                    "weight": 1,
+                    "elements": domain_elements,
+                }],
+            })
 
-        # Trend insight at bottom
+        # Trend insight
+        elements.append({"tag": "hr"})
         trend = data.get("trend_insight", "")
         if trend:
             elements.append({
