@@ -76,7 +76,7 @@ rss_feeds:
     domains: [AI, 芯片, 机器人]
     authority: medium
 
-  - url: https://www.huxiu.com/rss/0.xml
+  - url: https://rss.huxiu.com/
     name: 虎嗅
     lang: zh
     domains: [AI, 芯片, 机器人]

@@ -46,77 +46,96 @@ class FeishuDelivery:
             return False
 
     def _build_card(self, md: str, briefing_data: dict | None = None) -> dict:
+        """Build Feishu interactive card from structured briefing data."""
+        data = briefing_data or {}
+        data_items = data.get("items", [])
         elements = []
-        lines = md.split("\n")
-        i = 0
-        item_idx = 0
 
-        # Build a lookup from item index to stable item_id
-        data_items = (briefing_data or {}).get("items", [])
+        # Header stats
+        total = data.get("total_collected", 0)
+        selected = data.get("selected_count", 0)
+        elements.append({
+            "tag": "markdown",
+            "content": f"采集 {total} 条，精选 {selected} 条",
+        })
 
-        while i < len(lines):
-            line = lines[i].strip()
+        # TL;DR section
+        tldr = data.get("tldr", "")
+        if tldr:
+            elements.append({"tag": "hr"})
+            elements.append({
+                "tag": "markdown",
+                "content": f"**⚡ 速览**\n{tldr}",
+            })
 
-            if not line or line.startswith("# "):
-                i += 1
+        # Group items by domain
+        domain_items: dict[str, list[dict]] = {}
+        for item in data_items:
+            domain_items.setdefault(item.get("domain", "other"), []).append(item)
+
+        domain_emoji = {"AI": "🤖", "芯片": "🔬", "机器人": "🦾"}
+        domain_color = {"AI": "blue", "芯片": "turquoise", "机器人": "violet"}
+        idx = 1
+
+        for domain in ["AI", "芯片", "机器人"]:
+            d_items = domain_items.get(domain, [])
+            if not d_items:
                 continue
 
-            if line == "---":
-                elements.append({"tag": "hr"})
-                i += 1
-                continue
+            elements.append({"tag": "hr"})
+            emoji = domain_emoji.get(domain, "📌")
+            elements.append({
+                "tag": "markdown",
+                "content": f"**{emoji} {domain}（{len(d_items)}）**",
+            })
 
-            if line.startswith("> "):
-                text = line.lstrip("> ").strip()
+            for item in d_items:
+                # Item content block with background color
+                source_icon = "📺" if item.get("source") == "YouTube" else "📝"
+                channel = item.get("channel", "")
+                summary = item.get("summary", "")
+                why = item.get("why_it_matters", "")
+                url = item.get("url", "")
+                link_text = "观看原视频" if item.get("source") == "YouTube" else "阅读原文"
+
+                content_lines = [f"**{idx}. {item.get('title', '')}**"]
+                content_lines.append(f"{source_icon} {channel}")
+                if summary:
+                    content_lines.append(summary)
+                if why:
+                    content_lines.append(f"💡 {why}")
+                if url:
+                    content_lines.append(f"[🔗 {link_text}]({url})")
+
+                # Publish time
+                pub_at = item.get("published_at", "")
+                if pub_at:
+                    try:
+                        dt = datetime.fromisoformat(pub_at.replace("Z", "+00:00"))
+                        dt_bj = dt.astimezone(_BEIJING)
+                        content_lines.append(f"🕐 {dt_bj.strftime('%Y-%m-%d %H:%M')}")
+                    except (ValueError, TypeError):
+                        pass
+
+                # Use column_set with background for visual grouping
+                color = domain_color.get(domain, "grey")
                 elements.append({
-                    "tag": "note",
-                    "elements": [{"tag": "plain_text", "content": text}],
-                })
-                i += 1
-                continue
-
-            if line.startswith("## "):
-                heading = line.lstrip("# ").strip()
-                elements.append({"tag": "markdown", "content": f"**{heading}**"})
-                i += 1
-                continue
-
-            if line.startswith("### "):
-                title = line.lstrip("# ").strip()
-                block_lines = [f"**{title}**"]
-                i += 1
-
-                while i < len(lines):
-                    next_line = lines[i].strip()
-                    if not next_line or next_line.startswith("##") or next_line == "---":
-                        break
-                    next_line = re.sub(r"\*\*([^*]+)\*\*", r"**\1**", next_line)
-                    block_lines.append(next_line)
-                    i += 1
-
-                # Append publish time if available
-                if item_idx < len(data_items):
-                    pub_at = data_items[item_idx].get("published_at", "")
-                    if pub_at:
-                        try:
-                            dt = datetime.fromisoformat(pub_at.replace("Z", "+00:00"))
-                            dt_bj = dt.astimezone(_BEIJING)
-                            pub_display = dt_bj.strftime("%Y-%m-%d %H:%M")
-                        except (ValueError, TypeError):
-                            pub_display = pub_at[:16].replace("T", " ")
-                        block_lines.append(f"🕐 {pub_display}")
-
-                elements.append({
-                    "tag": "markdown",
-                    "content": "\n".join(block_lines),
+                    "tag": "column_set",
+                    "flex_mode": "none",
+                    "background_style": color,
+                    "columns": [{
+                        "tag": "column",
+                        "width": "weighted",
+                        "weight": 1,
+                        "elements": [{
+                            "tag": "markdown",
+                            "content": "\n".join(content_lines),
+                        }],
+                    }],
                 })
 
-                # Use stable item_id from briefing_data when available
-                if item_idx < len(data_items):
-                    stable_id = data_items[item_idx].get("item_id", str(item_idx + 1))
-                else:
-                    stable_id = str(item_idx + 1)
-
+                # Feedback buttons
+                stable_id = item.get("item_id", str(idx))
                 like_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=like"
                 dislike_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=dislike"
 
@@ -137,24 +156,26 @@ class FeishuDelivery:
                         },
                     ],
                 })
-                item_idx += 1
-                continue
+                idx += 1
 
-            text = re.sub(r"\*\*([^*]+)\*\*", r"**\1**", line)
-            elements.append({"tag": "markdown", "content": text})
-            i += 1
+        # Trend insight
+        trend = data.get("trend_insight", "")
+        if trend:
+            elements.append({"tag": "hr"})
+            elements.append({
+                "tag": "markdown",
+                "content": f"💡 **趋势洞察**\n{trend}",
+            })
 
-        elements.append({"tag": "hr"})
         elements.append({
             "tag": "note",
             "elements": [{"tag": "plain_text", "content": "📬 点击按钮反馈，帮助系统学习你的偏好"}],
         })
 
         title = "📋 VC 每日简报"
-        for line in lines:
-            if line.startswith("# "):
-                title = line.lstrip("# ").strip()
-                break
+        date_str = data.get("date", "")
+        if date_str:
+            title = f"📋 VC 每日简报 — {date_str}"
 
         return {
             "header": {
