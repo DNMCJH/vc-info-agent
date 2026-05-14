@@ -72,6 +72,8 @@ class WechatCollector:
             logger.warning(f"WeChat '{name}': {articles_data}")
             return []
 
+        logger.debug(f"WeChat '{name}' raw keys: {list(articles_data.keys()) if isinstance(articles_data, dict) else type(articles_data)}")
+
         results = []
         articles = articles_data.get("article_list", articles_data) if isinstance(articles_data, dict) else articles_data
 
@@ -92,9 +94,9 @@ class WechatCollector:
             else:
                 pub_str = ""
 
-            title = article.get("title", "")
-            digest = article.get("digest", article.get("abstract", ""))
-            link = article.get("link", article.get("content_url", ""))
+            title = article.get("Title") or article.get("title", "")
+            digest = article.get("Digest") or article.get("digest", article.get("abstract", ""))
+            link = article.get("ContentUrl") or article.get("content_url") or article.get("link", "")
 
             if not title:
                 continue
