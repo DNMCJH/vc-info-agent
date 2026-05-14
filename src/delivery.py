@@ -86,6 +86,7 @@ class FeishuDelivery:
 
             # Build all items in this domain as column elements
             domain_elements = []
+            item_feedback = []
             for item in d_items:
                 source_icon = "📺" if item.get("source") == "YouTube" else "📝"
                 channel = item.get("channel", "")
@@ -110,22 +111,22 @@ class FeishuDelivery:
                     "content": "\n".join(content_lines),
                 })
 
-                # Feedback buttons
+                # Collect feedback buttons (cannot be inside column_set)
                 stable_id = item.get("item_id", str(idx))
                 like_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=like"
                 dislike_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=dislike"
-                domain_elements.append({
+                item_feedback.append({
                     "tag": "action",
                     "actions": [
                         {
                             "tag": "button",
-                            "text": {"tag": "plain_text", "content": "👍"},
+                            "text": {"tag": "plain_text", "content": f"👍 {idx}"},
                             "type": "primary",
                             "url": like_url,
                         },
                         {
                             "tag": "button",
-                            "text": {"tag": "plain_text", "content": "👎"},
+                            "text": {"tag": "plain_text", "content": f"👎 {idx}"},
                             "type": "default",
                             "url": dislike_url,
                         },
@@ -146,6 +147,9 @@ class FeishuDelivery:
                     "elements": domain_elements,
                 }],
             })
+
+            # Feedback buttons outside column_set
+            elements.extend(item_feedback)
 
         # Trend insight
         elements.append({"tag": "hr"})
