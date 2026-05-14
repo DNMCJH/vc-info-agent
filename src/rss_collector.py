@@ -13,6 +13,10 @@ from config import Config
 _t2s = OpenCC("t2s")
 logger = logging.getLogger(__name__)
 
+_AGGREGATE_TITLE_RE = re.compile(
+    r"(8点1氪|氪星晚报|氪金[·・]大公司|早报[｜|]|晚报[｜|])"
+)
+
 
 class RSSCollector:
     """Collects articles from configured RSS feeds with domain classification."""
@@ -46,6 +50,10 @@ class RSSCollector:
                 continue
 
             title = entry.get("title", "")
+
+            if _AGGREGATE_TITLE_RE.search(title):
+                logger.debug(f"Skipped aggregate post: {title[:40]}")
+                continue
             summary = entry.get("summary", entry.get("description", ""))
             summary = re.sub(r"<[^>]+>", "", summary)[:2000]
 

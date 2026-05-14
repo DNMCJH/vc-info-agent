@@ -87,6 +87,8 @@ class ContentFilter:
         for kws in self.config.domain_keywords.values():
             all_keywords.extend(kws)
         hits = sum(1 for kw in all_keywords if kw.lower() in text)
+        if hits == 0:
+            return 0
         score += min(hits * 5, 20)
 
         # Recency (10%)

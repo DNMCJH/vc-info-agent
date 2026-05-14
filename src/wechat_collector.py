@@ -24,6 +24,7 @@ WECHAT_ACCOUNTS = {
     "gaogongrobot": ("高工机器人", "机器人"),
     "geekpark": ("极客公园", "AI"),
     "SerendipperShine": ("SerendipperShine", "AI"),
+    "liuxiaopai-ai": ("刘小排", "AI"),
 }
 
 

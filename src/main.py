@@ -14,6 +14,7 @@ from collector import YouTubeCollector
 from rss_collector import RSSCollector
 from twitter_collector import TwitterCollector
 from wechat_collector import WechatCollector
+from classifier import classify_items
 from filter import ContentFilter
 from summarizer import Summarizer
 from delivery import FeishuDelivery
@@ -71,8 +72,16 @@ def main():
         logger.warning("No items collected from any source.")
         sys.exit(0)
 
-    # Step 2: Filter
-    logger.info("Step 2/4: Filtering content...")
+    # Step 2: Classify domains using LLM
+    logger.info("Step 2/5: Classifying content domains...")
+    all_items = classify_items(all_items, config)
+    irrelevant_count = sum(1 for i in all_items if i.get("domain") == "irrelevant")
+    if irrelevant_count:
+        logger.info(f"Marked {irrelevant_count} items as irrelevant")
+    all_items = [i for i in all_items if i.get("domain") != "irrelevant"]
+
+    # Step 3: Filter
+    logger.info("Step 3/5: Filtering content...")
     content_filter = ContentFilter(config)
     filtered_items = content_filter.filter(all_items)
     logger.info(f"Filtered to {len(filtered_items)} high-quality items")
@@ -88,8 +97,8 @@ def main():
         if not item.get("item_id"):
             item["item_id"] = generate_item_id(item)
 
-    # Step 3: Summarize and generate briefing
-    logger.info("Step 3/4: Generating briefing with LLM...")
+    # Step 4: Summarize and generate briefing
+    logger.info("Step 4/5: Generating briefing with LLM...")
     summarizer = Summarizer(config)
     try:
         briefing_md, briefing_data = summarizer.generate_briefing(
@@ -98,7 +107,7 @@ def main():
     finally:
         summarizer.close()
 
-    # Step 4: Output
+    # Step 5: Output
     output_dir = Path(__file__).parent.parent / "sample_output"
     output_dir.mkdir(exist_ok=True)
     date_str = datetime.now().strftime("%Y-%m-%d")
@@ -114,8 +123,15 @@ def main():
     )
     logger.info(f"JSON briefing saved to {json_path}")
 
-    # Step 5: Deliver
-    logger.info("Step 4/4: Delivering briefing...")
+    # Save full Markdown to data/briefings/ as well
+    md_archive_path = BRIEFINGS_DIR / f"briefing_{date_str}.md"
+    md_archive_path.write_text(briefing_md, encoding="utf-8")
+
+    # Append to report log
+    _append_report_log(date_str, total_collected, filtered_items, irrelevant_count)
+
+    # Step 6: Deliver
+    logger.info("Step 5/5: Delivering briefing...")
     delivery = FeishuDelivery(config)
     delivery.send(briefing_md, briefing_data)
 
@@ -124,6 +140,31 @@ def main():
     print(f"Briefing generated: {output_path}")
     print(f"JSON data: {json_path}")
     print(f"{'=' * 60}")
+
+
+def _append_report_log(
+    date_str: str, total_collected: int, items: list[dict], irrelevant_count: int
+):
+    """Append one-line metadata to report_log.jsonl."""
+    log_path = BRIEFINGS_DIR / "report_log.jsonl"
+    domain_counts: dict[str, int] = {}
+    sources_hit: set[str] = set()
+    for item in items:
+        domain_counts[item.get("domain", "other")] = (
+            domain_counts.get(item.get("domain", "other"), 0) + 1
+        )
+        sources_hit.add(item.get("channel", ""))
+
+    entry = {
+        "date": date_str,
+        "total_collected": total_collected,
+        "selected": len(items),
+        "irrelevant_filtered": irrelevant_count,
+        "domains": domain_counts,
+        "sources_hit": sorted(sources_hit),
+    }
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
 if __name__ == "__main__":

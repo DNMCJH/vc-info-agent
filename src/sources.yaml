@@ -76,6 +76,12 @@ rss_feeds:
     domains: [AI, 芯片, 机器人]
     authority: medium
 
+  - url: https://www.huxiu.com/rss/0.xml
+    name: 虎嗅
+    lang: zh
+    domains: [AI, 芯片, 机器人]
+    authority: medium
+
   - url: https://www.jiqizhixin.com/rss
     name: 机器之心
     lang: zh
@@ -132,6 +138,9 @@ kol_whitelist:
   - 量子位
   - 机器之心
   - 36氪
+  - 虎嗅
+  - 刘小排
+  - 数字生命卡兹克
   - Andrej Karpathy
   - Lex Fridman
   - Andrew Ng

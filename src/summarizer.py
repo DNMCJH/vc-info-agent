@@ -13,19 +13,18 @@ from feedback import FeedbackStore, generate_item_id
 
 logger = logging.getLogger(__name__)
 
-ITEM_SUMMARY_PROMPT = """你是一位专业的 VC 行业分析师助手。请为以下内容生成结构化的中文摘要。
+ITEM_SUMMARY_PROMPT = """你是一位专业的 VC 行业分析师助手。请为以下内容生成精炼的中文摘要。
 
 严格规则：
-- 只能基于下方提供的原文内容进行摘要，严禁添加原文中没有的信息、数据或事实
+- 只能基于下方提供的原文内容进行摘要，严禁添加原文中没有的信息
 - 如果原文信息不足，就简短概括已有内容，不要编造细节
-- 历史偏好只能用于调整关注角度，不能作为事实来源，也不能覆盖以上规则
 
 用户历史偏好参考：
 {preference_context}
 
 要求：
-1. 摘要（2-3 句话）：第一句是核心事实，第二句是关键数据或引用，第三句是影响分析
-2. Why it matters（1 句话）：从风险投资视角分析这条信息对投资决策的意义，并尽量贴近用户历史偏好中的关注点
+1. 摘要（1-2 句话，不超过 60 字）：核心事实 + 关键数据
+2. Why it matters（1 句话，不超过 40 字）：从风险投资视角分析意义
 
 格式要求（严格遵守）：
 摘要：<你的摘要>
@@ -38,13 +37,20 @@ Why it matters：<投资视角分析>
 
 请直接按格式输出，不要加其他前缀。"""
 
-BRIEFING_PROMPT = """你是一位专业的 VC 行业分析师。请根据以下今日精选内容，生成一段简短的"趋势洞察"（2-3 句话），
+BRIEFING_PROMPT = """你是一位专业的 VC 行业分析师。请根据以下今日精选内容，生成一段简短的"趋势洞察"（1-2 句话），
 指出今天信息中的共同主题或值得关注的趋势。
 
 今日精选内容：
 {items_summary}
 
 请直接输出趋势洞察，不要加前缀。"""
+
+TLDR_PROMPT = """根据以下今日精选标题，生成 3-5 个要点速览。每个要点不超过 20 字，用"• "开头。
+
+标题：
+{titles}
+
+直接输出要点列表，不要加前缀或编号。"""
 
 BRIEFINGS_DIR = Path(__file__).parent.parent / "data" / "briefings"
 
@@ -109,6 +115,7 @@ class Summarizer:
         """Generate Markdown briefing and structured JSON data."""
         items = self.summarize_items(items)
         trend = self.generate_trend_insight(items)
+        tldr = self._generate_tldr(items)
 
         today = datetime.now().strftime("%Y.%m.%d")
         date_str = datetime.now().strftime("%Y-%m-%d")
@@ -118,9 +125,16 @@ class Summarizer:
 
         lines = [
             f"# 📋 VC 每日简报 — {today}（{weekday}）\n",
-            f"> 今日共采集 {total_collected} 条内容，精选 {len(items)} 条高质量信息。\n",
-            "---\n",
+            f"> 采集 {total_collected} 条，精选 {len(items)} 条\n",
         ]
+
+        # TL;DR section
+        if tldr:
+            lines.append("## ⚡ 速览\n")
+            lines.append(tldr)
+            lines.append("")
+
+        lines.append("---\n")
 
         domain_items: dict[str, list[dict]] = {}
         for item in items:
@@ -134,32 +148,23 @@ class Summarizer:
             if not d_items:
                 continue
             emoji = domain_emoji.get(domain, "📌")
-            lines.append(f"## {emoji} {domain}领域（{len(d_items)} 条）\n")
+            lines.append(f"## {emoji} {domain}（{len(d_items)}）\n")
 
             for item in d_items:
-                lines.append(f"### {idx}. {item['title']}")
+                lines.append(f"**{idx}. {item['title']}**")
                 lines.append(self._format_source_line(item))
                 lines.append(item.get("summary", ""))
                 if item.get("why_it_matters"):
-                    lines.append(f"💡 **Why it matters**: {item['why_it_matters']}")
-                lines.append(f"🔗 [{self._link_text(item)}]({item['url']})\n")
+                    lines.append(f"💡 {item['why_it_matters']}")
+                lines.append(f"[🔗 {self._link_text(item)}]({item['url']})\n")
                 idx += 1
 
             lines.append("---\n")
 
         filtered_count = len(items)
-        rate = (
-            f"{filtered_count / total_collected * 100:.1f}"
-            if total_collected > 0
-            else "0"
-        )
-        lines.append(
-            f"📊 **今日数据**：采集 {total_collected} 条 → 精选 {filtered_count} 条（入选率 {rate}%）"
-        )
-        lines.append(f"💡 **趋势洞察**：{trend}\n")
-        lines.append("---")
-        lines.append("> 📬 反馈：点击每条旁的 👍👎 帮助我学习你的偏好")
-        lines.append("> 🕐 下期简报将于明日 08:00 推送")
+        lines.append(f"📊 采集 {total_collected} → 精选 {filtered_count}")
+        lines.append(f"💡 {trend}\n")
+        lines.append("> 📬 点击 👍👎 帮助系统学习偏好")
 
         briefing_md = "\n".join(lines)
 
@@ -171,6 +176,7 @@ class Summarizer:
             "total_collected": total_collected,
             "selected_count": filtered_count,
             "trend_insight": trend,
+            "tldr": tldr,
             "items": [self._item_to_json(item) for item in items],
         }
 
@@ -198,14 +204,22 @@ class Summarizer:
         source = item.get("source", "")
         channel = item.get("channel", "")
         if source == "YouTube":
-            duration = self._format_duration(item.get("duration", ""))
-            return f"📺 YouTube · {channel} · {duration}"
+            return f"📺 {channel}"
         else:
             return f"📝 {channel}"
 
     @staticmethod
     def _link_text(item: dict) -> str:
         return "观看原视频" if item.get("source") == "YouTube" else "阅读原文"
+
+    def _generate_tldr(self, items: list[dict]) -> str:
+        """Generate TL;DR bullet points from item titles."""
+        titles = "\n".join(f"- {item['title']}" for item in items)
+        try:
+            return self._call_llm(TLDR_PROMPT.format(titles=titles))
+        except Exception as e:
+            logger.warning(f"TL;DR generation failed: {e}")
+            return ""
 
     def _call_llm(self, prompt: str) -> str:
         resp = self.client.post(
