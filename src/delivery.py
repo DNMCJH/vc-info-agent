@@ -74,7 +74,6 @@ class FeishuDelivery:
             domain_items.setdefault(item.get("domain", "other"), []).append(item)
 
         domain_emoji = {"AI": "🤖", "芯片": "🔬", "机器人": "🦾"}
-        domain_color = {"AI": "blue", "芯片": "turquoise", "机器人": "violet"}
         idx = 1
 
         for domain in ["AI", "芯片", "机器人"]:
@@ -117,12 +116,11 @@ class FeishuDelivery:
                     except (ValueError, TypeError):
                         pass
 
-                # Use column_set with background for visual grouping
-                color = domain_color.get(domain, "grey")
+                # Use column_set with subtle background for visual grouping
                 elements.append({
                     "tag": "column_set",
                     "flex_mode": "none",
-                    "background_style": color,
+                    "background_style": "rgba(246,248,250,1)",
                     "columns": [{
                         "tag": "column",
                         "width": "weighted",
