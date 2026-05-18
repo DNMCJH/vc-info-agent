@@ -127,18 +127,19 @@ class FeishuDelivery:
                 dislike_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=dislike"
                 elements.append({
                     "tag": "action",
-                    "layout": "bisected",
                     "actions": [
                         {
                             "tag": "button",
-                            "text": {"tag": "plain_text", "content": "👍 有用"},
-                            "type": "primary",
+                            "text": {"tag": "plain_text", "content": "有用"},
+                            "type": "default",
+                            "size": "small",
                             "url": like_url,
                         },
                         {
                             "tag": "button",
-                            "text": {"tag": "plain_text", "content": "👎 不想看"},
+                            "text": {"tag": "plain_text", "content": "不想看"},
                             "type": "default",
+                            "size": "small",
                             "url": dislike_url,
                         },
                     ],
@@ -160,7 +161,7 @@ class FeishuDelivery:
         selected = data.get("selected_count", 0)
         elements.append({
             "tag": "note",
-            "elements": [{"tag": "plain_text", "content": f"📊 采集 {total} → 精选 {selected} · 点击按钮帮助系统学习偏好"}],
+            "elements": [{"tag": "plain_text", "content": f"采集 {total} → 精选 {selected}"}],
         })
 
         title = "📋 VC 每日简报"
