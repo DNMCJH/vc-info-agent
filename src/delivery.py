@@ -127,6 +127,7 @@ class FeishuDelivery:
                 dislike_url = f"{FEEDBACK_BASE}/feedback?id={stable_id}&r=dislike"
                 elements.append({
                     "tag": "action",
+                    "layout": "bisected",
                     "actions": [
                         {
                             "tag": "button",

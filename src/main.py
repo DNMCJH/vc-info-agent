@@ -6,7 +6,7 @@ Runs the full pipeline: collect → filter → summarize → deliver.
 import json
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from config import Config
@@ -27,6 +27,27 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BRIEFINGS_DIR = Path(__file__).parent.parent / "data" / "briefings"
+SEEN_DB = Path(__file__).parent.parent / "data" / "seen_articles.json"
+# Retain seen IDs for 30 days; collectors use shorter windows (e.g. WeChat 3-day),
+# so anything older than 30 days won't appear again anyway.
+SEEN_RETENTION_DAYS = 30
+
+
+def _load_seen(db: Path) -> dict[str, str]:
+    if not db.exists():
+        return {}
+    try:
+        return json.loads(db.read_text(encoding="utf-8"))
+    except Exception:
+        logger.warning(f"Could not parse {db}, starting fresh")
+        return {}
+
+
+def _save_seen(db: Path, seen: dict[str, str]) -> None:
+    cutoff = (datetime.now() - timedelta(days=SEEN_RETENTION_DAYS)).date().isoformat()
+    pruned = {k: v for k, v in seen.items() if v >= cutoff}
+    db.parent.mkdir(parents=True, exist_ok=True)
+    db.write_text(json.dumps(pruned, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def main():
@@ -70,6 +91,19 @@ def main():
 
     if not all_items:
         logger.warning("No items collected from any source.")
+        sys.exit(0)
+
+    # Step 1e: Cross-run dedup against previously-delivered article_ids
+    seen = _load_seen(SEEN_DB)
+    if seen:
+        before = len(all_items)
+        all_items = [i for i in all_items if i.get("article_id") not in seen]
+        skipped = before - len(all_items)
+        if skipped:
+            logger.info(f"Dedup: skipped {skipped} previously-delivered items ({before} → {len(all_items)})")
+
+    if not all_items:
+        logger.warning("All collected items were already delivered before.")
         sys.exit(0)
 
     # Step 2: Classify domains using LLM
@@ -134,6 +168,15 @@ def main():
     logger.info("Step 5/5: Delivering briefing...")
     delivery = FeishuDelivery(config)
     delivery.send(briefing_md, briefing_data)
+
+    # Record delivered article_ids so they won't be re-shown in future runs
+    today = datetime.now().date().isoformat()
+    for item in filtered_items:
+        aid = item.get("article_id")
+        if aid:
+            seen[aid] = today
+    _save_seen(SEEN_DB, seen)
+    logger.info(f"Updated {SEEN_DB.name}: {len(seen)} entries (kept last {SEEN_RETENTION_DAYS} days)")
 
     logger.info("=== VC Info Agent finished ===")
     print(f"\n{'=' * 60}")
