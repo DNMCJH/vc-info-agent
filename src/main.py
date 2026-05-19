@@ -5,6 +5,7 @@ Runs the full pipeline: collect → filter → summarize → deliver.
 
 import json
 import logging
+import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -186,6 +187,23 @@ def main():
     logger.info("Step 7/7: Delivering briefing...")
     delivery = FeishuDelivery(config)
     delivery.send(briefing_md, briefing_data)
+
+    # Optional: push to WeChat via wxauto (requires Windows GUI + WECHAT_CHAT_NAME).
+    # Skipped silently when env var is unset, so Linux/cloud scheduler runs are unaffected.
+    wechat_chat = os.getenv("WECHAT_CHAT_NAME", "").strip()
+    if wechat_chat and card_path:
+        h5_base = os.getenv("H5_BASE_URL", "").rstrip("/")
+        detail_url = f"{h5_base}/briefing/{date_str}" if h5_base else None
+        audio_url = f"{h5_base}/audio/briefing_{date_str}.mp3" if (h5_base and audio_path) else None
+        try:
+            from wechat_delivery import WechatDelivery
+            WechatDelivery(wechat_chat).send(
+                card_image_path=card_path,
+                audio_url=audio_url,
+                detail_url=detail_url,
+            )
+        except Exception as e:
+            logger.warning(f"WeChat delivery skipped: {e}")
 
     # Record delivered article_ids so they won't be re-shown in future runs
     today = datetime.now().date().isoformat()
