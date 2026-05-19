@@ -1,0 +1,77 @@
+{
+  "briefing_id": "briefing_2026-05-19",
+  "date": "2026-05-19",
+  "generated_at": "2026-05-19T08:30:00",
+  "total_collected": 47,
+  "selected_count": 6,
+  "trend_insight": "今日多条信息指向自动驾驶安全监管趋严，同时国产大模型在端侧部署加速落地，两者交汇可能催生车载AI合规新赛道。",
+  "tldr": "• Waymo 因洪水事件召回 3800 辆 robotaxi\n• OpenAI 发布 o4-mini 端侧推理模型\n• 比亚迪获王力宏代言费直接投资\n• 阿里通义千问开源 Qwen3-8B\n• 英伟达 H200 供货周期缩短至 6 周",
+  "items": [
+    {
+      "item_id": "item_001",
+      "title": "Waymo 因得州洪水事件召回近 3800 辆 robotaxi",
+      "url": "https://example.com/waymo",
+      "source": "RSS",
+      "channel": "The Rundown AI",
+      "domain": "AI",
+      "summary": "Waymo 因空车驶入洪水被冲走，主动召回全美 3800 辆车进行软件修复，暂停圣安东尼奥服务。",
+      "why_it_matters": "自动驾驶安全事件频发将加速监管立法，影响 L4 公司估值逻辑",
+      "quality_score": 88
+    },
+    {
+      "item_id": "item_002",
+      "title": "OpenAI 正式发布 o4-mini：端侧推理新标杆",
+      "url": "https://example.com/o4mini",
+      "source": "RSS",
+      "channel": "AI前线",
+      "domain": "AI",
+      "summary": "o4-mini 主打低功耗设备部署，推理速度较 o3 提升 3 倍，支持 128K 上下文。",
+      "why_it_matters": "端侧大模型竞争白热化，对高通/联发科芯片生态形成利好",
+      "quality_score": 92
+    },
+    {
+      "item_id": "item_003",
+      "title": "阿里开源通义千问 Qwen3-8B 模型",
+      "url": "https://example.com/qwen3",
+      "source": "WeChat",
+      "channel": "归藏的AI工具箱",
+      "domain": "AI",
+      "summary": "Qwen3-8B 在多项基准上超越 Llama3-8B，支持中英日韩四语，Apache 2.0 协议。",
+      "why_it_matters": "开源模型持续缩小与闭源差距，降低创业公司模型成本",
+      "quality_score": 85
+    },
+    {
+      "item_id": "item_004",
+      "title": "英伟达 H200 供货周期缩短至 6 周",
+      "url": "https://example.com/h200",
+      "source": "RSS",
+      "channel": "SemiAnalysis",
+      "domain": "芯片",
+      "summary": "台积电 CoWoS 产能爬坡顺利，H200 交付周期从 16 周降至 6 周，利好中小客户。",
+      "why_it_matters": "算力瓶颈缓解将加速 AI 应用层创业公司的训练和推理部署",
+      "quality_score": 90
+    },
+    {
+      "item_id": "item_005",
+      "title": "Figure 02 人形机器人完成仓库分拣实测",
+      "url": "https://example.com/figure",
+      "source": "YouTube",
+      "channel": "Figure AI",
+      "domain": "机器人",
+      "summary": "Figure 02 在亚马逊仓库完成 8 小时连续分拣测试，准确率 97.3%，无人工干预。",
+      "why_it_matters": "人形机器人从 demo 走向实际产线验证，商业化时间表提前",
+      "quality_score": 91
+    },
+    {
+      "item_id": "item_006",
+      "title": "比亚迪获王力宏代言费直接投资入股",
+      "url": "https://example.com/byd",
+      "source": "WeChat",
+      "channel": "ZoomZoe",
+      "domain": "AI",
+      "summary": "王力宏在腾势 N9 发布会上宣布将代言费全额购买比亚迪股票，看好新能源长期价值。",
+      "why_it_matters": "明星以代言费换股权模式在新能源赛道扩散，反映市场信心",
+      "quality_score": 72
+    }
+  ]
+}
