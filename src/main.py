@@ -19,6 +19,8 @@ from filter import ContentFilter
 from summarizer import Summarizer
 from delivery import FeishuDelivery
 from feedback import generate_item_id
+from card_image import generate_card_image
+from tts import generate_audio
 
 logging.basicConfig(
     level=logging.INFO,
@@ -164,8 +166,24 @@ def main():
     # Append to report log
     _append_report_log(date_str, total_collected, filtered_items, irrelevant_count)
 
-    # Step 6: Deliver
-    logger.info("Step 5/5: Delivering briefing...")
+    # Step 6: Generate card image and audio
+    logger.info("Step 6/7: Generating card image and audio...")
+    try:
+        card_path = generate_card_image(briefing_data)
+        logger.info(f"Card image: {card_path}")
+    except Exception as e:
+        logger.warning(f"Card image generation failed: {e}")
+        card_path = None
+
+    try:
+        audio_path = generate_audio(briefing_data)
+        logger.info(f"Audio: {audio_path}")
+    except Exception as e:
+        logger.warning(f"Audio generation failed: {e}")
+        audio_path = None
+
+    # Step 7: Deliver
+    logger.info("Step 7/7: Delivering briefing...")
     delivery = FeishuDelivery(config)
     delivery.send(briefing_md, briefing_data)
 

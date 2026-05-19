@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VC 每日简报 — {{ date }}</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif;
+  background: #faf7f2;
+  color: #2d2a26;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  line-height: 1.6;
+}
+
+.header {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e8e0d4;
+}
+
+.brand {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9b8b75;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1714;
+  margin-bottom: 8px;
+}
+
+.meta {
+  font-size: 14px;
+  color: #9b8b75;
+}
+
+/* Audio player */
+.audio-section {
+  background: #f0ebe3;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.audio-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #b45309;
+  margin-bottom: 10px;
+}
+
+audio {
+  width: 100%;
+  height: 40px;
+}
+
+/* TL;DR */
+.tldr {
+  background: #f5f0e8;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.tldr h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #d97706;
+  margin-bottom: 10px;
+}
+
+.tldr-item {
+  font-size: 14px;
+  color: #4a4540;
+  line-height: 1.7;
+}
+
+/* Domain sections */
+.domain-section {
+  margin-bottom: 28px;
+}
+
+.domain-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e8e0d4;
+}
+
+.domain-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1714;
+}
+
+.domain-count {
+  font-size: 12px;
+  color: #9b8b75;
+  background: #efe8dc;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Item cards */
+.item-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  border-left: 3px solid #d97706;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.item-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.item-title a {
+  color: #1a1714;
+  text-decoration: none;
+}
+
+.item-title a:hover {
+  color: #b45309;
+}
+
+.item-source {
+  font-size: 12px;
+  color: #9b8b75;
+  margin-bottom: 8px;
+}
+
+.item-summary {
+  font-size: 14px;
+  color: #4a4540;
+  margin-bottom: 8px;
+}
+
+.item-why {
+  font-size: 13px;
+  color: #b45309;
+  margin-bottom: 10px;
+}
+
+/* Feedback buttons */
+.feedback-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fb-btn {
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 1px solid #e0d8cc;
+  border-radius: 14px;
+  background: #faf7f2;
+  color: #6b6055;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fb-btn:hover {
+  background: #f0ebe3;
+  border-color: #d97706;
+  color: #b45309;
+}
+
+.fb-btn.active {
+  background: #d97706;
+  color: #ffffff;
+  border-color: #d97706;
+}
+
+.fb-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Trend */
+.trend-section {
+  background: #f5f0e8;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.trend-section h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #b45309;
+  margin-bottom: 8px;
+}
+
+.trend-section p {
+  font-size: 14px;
+  color: #4a4540;
+}
+
+/* Footer */
+.footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid #e8e0d4;
+  text-align: center;
+}
+
+.footer p {
+  font-size: 12px;
+  color: #9b8b75;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">VC Daily Brief</div>
+  <h1 class="title">每日简报 · {{ date }}</h1>
+  <div class="meta">{{ weekday }} · 采集 {{ total_collected }} 条，精选 {{ item_count }} 条</div>
+</div>
+
+{% if audio_url %}
+<div class="audio-section">
+  <div class="audio-title">🎧 音频版（{{ audio_duration }}）· 点击播放</div>
+  <audio controls preload="metadata" src="{{ audio_url }}">
+    您的浏览器不支持音频播放
+  </audio>
+</div>
+{% endif %}
+
+{% if tldr_lines %}
+<div class="tldr">
+  <h3>⚡ 速览</h3>
+  {% for point in tldr_lines %}
+  <div class="tldr-item">{{ point }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% for domain, items in grouped_items %}
+<div class="domain-section">
+  <div class="domain-header">
+    <h2>{{ domain_emoji[domain] }} {{ domain }}</h2>
+    <span class="domain-count">{{ items|length }}</span>
+  </div>
+  {% for item in items %}
+  <div class="item-card" id="item-{{ item.item_id }}">
+    <div class="item-title">
+      <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
+    </div>
+    <div class="item-source">{{ item.channel }}</div>
+    <div class="item-summary">{{ item.summary }}</div>
+    {% if item.why_it_matters %}
+    <div class="item-why">💡 {{ item.why_it_matters }}</div>
+    {% endif %}
+    <div class="feedback-row" data-id="{{ item.item_id }}">
+      <button type="button" class="fb-btn" data-rating="like">有用</button>
+      <button type="button" class="fb-btn" data-rating="too_technical">太技术</button>
+      <button type="button" class="fb-btn" data-rating="already_known">已知道</button>
+      <button type="button" class="fb-btn" data-rating="dislike">不想看</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+
+{% if trend_insight %}
+<div class="trend-section">
+  <h3>🔮 趋势洞察</h3>
+  <p>{{ trend_insight }}</p>
+</div>
+{% endif %}
+
+<div class="footer">
+  <p>VC Daily Brief · Powered by vc-info-agent</p>
+</div>
+
+<script>
+document.querySelectorAll('.feedback-row').forEach(row => {
+  const itemId = row.dataset.id;
+  row.querySelectorAll('.fb-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const rating = btn.dataset.rating;
+      btn.classList.add('active');
+      row.querySelectorAll('.fb-btn').forEach(b => {
+        if (b !== btn) b.disabled = true;
+      });
+      try {
+        await fetch('/api/feedback', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({item_id: itemId, rating: rating})
+        });
+      } catch(e) { /* silent fail */ }
+    });
+  });
+});
+</script>
+</body>
+</html>

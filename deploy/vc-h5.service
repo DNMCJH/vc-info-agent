@@ -1,0 +1,15 @@
+[Unit]
+Description=VC Info Agent H5 Briefing Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/vc-info-agent
+ExecStart=/home/ubuntu/vc-info-agent/venv/bin/python src/h5_server.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
