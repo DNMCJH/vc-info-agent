@@ -61,13 +61,22 @@ We still need to choose **where the scheduler lives**.
   PC happens to be on.
 - Cons: more moving parts; need a poll endpoint or webhook on VPS.
 
-### Option D: Replace wxauto with WeCom (企业微信) bot webhook
+### Option D: Replace wxauto with WeCom (企业微信) bot webhook  ✅ implemented (2026-05-20)
 
 - 企业微信 has a real webhook API like Feishu — no GUI needed.
 - Push from VPS directly, no Windows dependency.
 - Pros: cloud-native, reliable, same model as Feishu.
 - Cons: requires 企业微信 setup, push goes to 企业微信 not personal WeChat.
   User's actual audience might not use 企业微信.
+
+**Status**: `src/wecom_delivery.py` written, wired into `main.py` step 7. Sends
+a `news` image card (clickable, links to H5 detail page) when `H5_BASE_URL` +
+card image are available; falls back to `markdown` text otherwise. Gated by
+`WECOM_WEBHOOK_URL` env var — no-op when unset, so safe to merge.
+
+**To enable**: create a 企业微信 group bot, copy its webhook URL, set
+`WECOM_WEBHOOK_URL=<url>` in `.env`. Coexists with Options A/B/C — all three
+delivery channels (Feishu / personal WeChat / WeCom) can fire from one run.
 
 ## Recommended next step
 

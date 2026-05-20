@@ -188,13 +188,16 @@ def main():
     delivery = FeishuDelivery(config)
     delivery.send(briefing_md, briefing_data)
 
+    # Build public URLs once — shared by WeChat (wxauto) and WeCom (webhook) paths.
+    h5_base = os.getenv("H5_BASE_URL", "").rstrip("/")
+    detail_url = f"{h5_base}/briefing/{date_str}" if h5_base else None
+    audio_url = f"{h5_base}/audio/briefing_{date_str}.mp3" if (h5_base and audio_path) else None
+    card_url = f"{h5_base}/cards/card_{date_str}.png" if (h5_base and card_path) else None
+
     # Optional: push to WeChat via wxauto (requires Windows GUI + WECHAT_CHAT_NAME).
     # Skipped silently when env var is unset, so Linux/cloud scheduler runs are unaffected.
     wechat_chat = os.getenv("WECHAT_CHAT_NAME", "").strip()
     if wechat_chat and card_path:
-        h5_base = os.getenv("H5_BASE_URL", "").rstrip("/")
-        detail_url = f"{h5_base}/briefing/{date_str}" if h5_base else None
-        audio_url = f"{h5_base}/audio/briefing_{date_str}.mp3" if (h5_base and audio_path) else None
         try:
             from wechat_delivery import WechatDelivery
             WechatDelivery(wechat_chat).send(
@@ -204,6 +207,23 @@ def main():
             )
         except Exception as e:
             logger.warning(f"WeChat delivery skipped: {e}")
+
+    # Optional: push to WeCom (企业微信) group bot — cloud-native, works on VPS.
+    # Skipped when WECOM_WEBHOOK_URL is unset.
+    wecom_url = os.getenv("WECOM_WEBHOOK_URL", "").strip()
+    if wecom_url:
+        try:
+            from wecom_delivery import WecomDelivery
+            WecomDelivery(wecom_url).send(
+                date_str=date_str,
+                item_count=len(filtered_items),
+                detail_url=detail_url,
+                audio_url=audio_url,
+                card_image_url=card_url,
+                tldr=briefing_data.get("tldr", ""),
+            )
+        except Exception as e:
+            logger.warning(f"WeCom delivery skipped: {e}")
 
     # Record delivered article_ids so they won't be re-shown in future runs
     today = datetime.now().date().isoformat()
