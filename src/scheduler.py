@@ -7,6 +7,7 @@ Keeps running 24/7, triggers main pipeline at configured time.
 import logging
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -21,6 +22,13 @@ logger = logging.getLogger(__name__)
 MAIN_SCRIPT = str(Path(__file__).parent / "main.py")
 SRC_DIR = str(Path(__file__).parent)
 PYTHON = sys.executable
+BRIEFINGS_DIR = Path(__file__).parent.parent / "data" / "briefings"
+
+
+def _already_ran_today() -> bool:
+    """Check if today's briefing JSON already exists (pipeline ran successfully)."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    return (BRIEFINGS_DIR / f"briefing_{today}.json").exists()
 
 
 def run_pipeline():
@@ -55,8 +63,11 @@ def main():
     logger.info("Scheduler started — briefing will run daily at 08:00")
     logger.info("Press Ctrl+C to stop")
 
-    # Run once immediately on startup
-    run_pipeline()
+    # Run on startup only if today's briefing hasn't been generated yet
+    if _already_ran_today():
+        logger.info("Today's briefing already exists, skipping startup run")
+    else:
+        run_pipeline()
 
     try:
         scheduler.start()

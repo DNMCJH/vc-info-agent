@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+  background: linear-gradient(135deg, #faf7f2 0%, #f5f0e8 100%);
+  color: #2d2a26;
+  width: 900px;
+  height: 383px;
+  padding: 36px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.brand-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8b7355;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.date-badge {
+  font-size: 13px;
+  color: #9b8b75;
+  background: #efe8dc;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+.title-row {
+  margin-top: 16px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1714;
+  line-height: 1.3;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #9b8b75;
+  margin-top: 4px;
+}
+
+.tldr {
+  background: rgba(245, 240, 232, 0.8);
+  border-radius: 12px;
+  padding: 16px 20px;
+  flex: 1;
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+.tldr-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #d97706;
+  margin-bottom: 10px;
+}
+
+.tldr-item {
+  font-size: 14px;
+  color: #4a4540;
+  line-height: 1.7;
+  padding-left: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.stats {
+  font-size: 12px;
+  color: #9b8b75;
+}
+
+.cta {
+  font-size: 12px;
+  color: #d97706;
+  font-weight: 500;
+}
+</style>
+</head>
+<body>
+<div>
+  <div class="top">
+    <div class="brand">
+      <div class="brand-icon">📋</div>
+      <span class="brand-name">VC Daily Brief</span>
+    </div>
+    <div class="date-badge">{{ date_display }}</div>
+  </div>
+  <div class="title-row">
+    <div class="title">今日精选 {{ item_count }} 条</div>
+    <div class="subtitle">{{ weekday }} · AI / 芯片 / 机器人</div>
+  </div>
+</div>
+
+<div class="tldr">
+  <div class="tldr-title">⚡ 速览</div>
+  {% for point in tldr_lines %}
+  <div class="tldr-item">{{ point }}</div>
+  {% endfor %}
+</div>
+
+<div class="footer">
+  <span class="stats">采集 {{ total_collected }} 条 → 精选 {{ item_count }} 条</span>
+  <span class="cta">点击查看完整日报 →</span>
+</div>
+</body>
+</html>

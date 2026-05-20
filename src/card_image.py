@@ -72,13 +72,51 @@ def _render_html(data: dict) -> str:
     )
 
 
-def _screenshot(html: str, output_path: Path) -> None:
+def generate_cover_image(briefing_data: dict, output_path: Path | None = None) -> Path:
+    """Render a compact cover image (900x383) with only TL;DR — for WeCom news card."""
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    date_str = briefing_data.get("date", datetime.now().strftime("%Y-%m-%d"))
+    if output_path is None:
+        output_path = OUTPUT_DIR / f"cover_{date_str}.png"
+
+    html = _render_cover_html(briefing_data)
+    _screenshot(html, output_path, viewport_width=900, viewport_height=383)
+    logger.info(f"Cover image saved to {output_path}")
+    return output_path
+
+
+def _render_cover_html(data: dict) -> str:
+    env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
+    template = env.get_template("cover.html")
+
+    date_str = data.get("date", "")
+    weekday = ""
+    if date_str:
+        try:
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+            weekday = WEEKDAYS[dt.weekday()]
+        except ValueError:
+            pass
+
+    tldr = data.get("tldr", "")
+    tldr_lines = [line.strip() for line in tldr.split("\n") if line.strip()] if tldr else []
+
+    return template.render(
+        date_display=date_str,
+        weekday=weekday,
+        item_count=data.get("selected_count", len(data.get("items", []))),
+        total_collected=data.get("total_collected", 0),
+        tldr_lines=tldr_lines,
+    )
+
+
+def _screenshot(html: str, output_path: Path, viewport_width: int = 420, viewport_height: int = 800) -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 420, "height": 800})
+        page = browser.new_page(viewport={"width": viewport_width, "height": viewport_height})
         page.set_content(html, wait_until="networkidle")
         page.wait_for_timeout(300)
-        # Auto-height: screenshot full page
         page.screenshot(path=str(output_path), full_page=True)
         browser.close()
 

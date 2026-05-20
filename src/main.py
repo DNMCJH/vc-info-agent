@@ -20,7 +20,7 @@ from filter import ContentFilter
 from summarizer import Summarizer
 from delivery import FeishuDelivery
 from feedback import generate_item_id
-from card_image import generate_card_image
+from card_image import generate_card_image, generate_cover_image
 from tts import generate_audio
 
 logging.basicConfig(
@@ -167,7 +167,7 @@ def main():
     # Append to report log
     _append_report_log(date_str, total_collected, filtered_items, irrelevant_count)
 
-    # Step 6: Generate card image and audio
+    # Step 6: Generate card image, cover image, and audio
     logger.info("Step 6/7: Generating card image and audio...")
     try:
         card_path = generate_card_image(briefing_data)
@@ -175,6 +175,13 @@ def main():
     except Exception as e:
         logger.warning(f"Card image generation failed: {e}")
         card_path = None
+
+    try:
+        cover_path = generate_cover_image(briefing_data)
+        logger.info(f"Cover image: {cover_path}")
+    except Exception as e:
+        logger.warning(f"Cover image generation failed: {e}")
+        cover_path = None
 
     try:
         audio_path = generate_audio(briefing_data)
@@ -192,7 +199,7 @@ def main():
     h5_base = os.getenv("H5_BASE_URL", "").rstrip("/")
     detail_url = f"{h5_base}/briefing/{date_str}" if h5_base else None
     audio_url = f"{h5_base}/audio/briefing_{date_str}.mp3" if (h5_base and audio_path) else None
-    card_url = f"{h5_base}/cards/card_{date_str}.png" if (h5_base and card_path) else None
+    cover_url = f"{h5_base}/cards/cover_{date_str}.png" if (h5_base and cover_path) else None
 
     # Optional: push to WeChat via wxauto (requires Windows GUI + WECHAT_CHAT_NAME).
     # Skipped silently when env var is unset, so Linux/cloud scheduler runs are unaffected.
@@ -219,7 +226,7 @@ def main():
                 item_count=len(filtered_items),
                 detail_url=detail_url,
                 audio_url=audio_url,
-                card_image_url=card_url,
+                card_image_url=cover_url,
                 tldr=briefing_data.get("tldr", ""),
             )
         except Exception as e:
