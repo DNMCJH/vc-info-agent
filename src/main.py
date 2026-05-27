@@ -3,6 +3,7 @@ VC Info Agent — main entry point.
 Runs the full pipeline: collect → filter → summarize → deliver.
 """
 
+import argparse
 import json
 import logging
 import os
@@ -15,13 +16,11 @@ from collector import YouTubeCollector
 from rss_collector import RSSCollector
 from twitter_collector import TwitterCollector
 from wechat_collector import WechatCollector
-from classifier import classify_items
 from filter import ContentFilter
-from summarizer import Summarizer
-from delivery import FeishuDelivery
 from feedback import generate_item_id
-from card_image import generate_card_image, generate_cover_image
-from tts import generate_audio
+
+# Heavy modules (LLM, jinja2, TTS) are imported lazily inside main() so that
+# `--dry-run` (collect + dedup only) works without those dependencies.
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,6 +60,13 @@ def main():
         sys.exit(1)
 
     logger.info("=== VC Info Agent starting ===")
+
+    # Lazy imports — heavy deps (LLM, jinja2, TTS) not needed for --dry-run.
+    from classifier import classify_items
+    from summarizer import Summarizer
+    from delivery import FeishuDelivery
+    from card_image import generate_card_image, generate_cover_image
+    from tts import generate_audio
 
     # Step 1: Collect from all sources
     all_items = []
@@ -273,5 +279,62 @@ def _append_report_log(
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+def dry_run():
+    """Collect + dedup only — no LLM calls, no delivery.
+
+    Used to validate the event-level deduplication: prints each cluster so
+    the kept item and its merged_from duplicates can be inspected for false
+    merges (different events lumped together) or misses (real dupes left in).
+    """
+    config = Config()
+    logger.info("=== VC Info Agent DRY RUN (collect + dedup only) ===")
+
+    all_items = []
+    if config.youtube_api_key:
+        all_items.extend(YouTubeCollector(config).collect())
+    all_items.extend(RSSCollector(config).collect())
+    all_items.extend(TwitterCollector(config).collect())
+    all_items.extend(WechatCollector(config).collect())
+    logger.info(f"Total collected: {len(all_items)} items")
+
+    if not all_items:
+        logger.warning("No items collected.")
+        return
+
+    # Dedup runs on raw items; classify (LLM) is skipped, so domain may be
+    # absent — _score tolerates missing fields, but we only care about dedup.
+    content_filter = ContentFilter(config)
+    scored = []
+    for item in all_items:
+        item["quality_score"] = content_filter._score(item)
+        scored.append(item)
+    scored.sort(key=lambda x: x["quality_score"], reverse=True)
+    deduped = content_filter._deduplicate(scored)
+
+    print(f"\n{'='*70}")
+    print(f"DEDUP: {len(scored)} items -> {len(deduped)} clusters")
+    print(f"{'='*70}")
+    for item in deduped:
+        merged = item.get("merged_from", [])
+        marker = f"  [+{len(merged)} merged]" if merged else ""
+        print(f"\n[{item.get('quality_score')}] {item.get('title', '')[:65]}{marker}")
+        print(f"    source: {item.get('channel') or item.get('source', '')}")
+        for m in merged:
+            print(f"    └─ MERGED: {m['title'][:60]}  ({m.get('channel', '')})")
+    print(f"\n{'='*70}")
+    multi = [i for i in deduped if i.get("merged_from")]
+    print(f"{len(multi)} clusters merged duplicates. Review above for false merges.")
+    print(f"{'='*70}\n")
+
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="VC Info Agent")
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Collect + dedup only; no LLM calls, no delivery (dedup validation)",
+    )
+    args = parser.parse_args()
+    if args.dry_run:
+        dry_run()
+    else:
+        main()

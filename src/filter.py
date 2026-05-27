@@ -119,24 +119,107 @@ class ContentFilter:
 
         return max(score, 0)
 
-    @staticmethod
-    def _deduplicate(items: list[dict]) -> list[dict]:
-        """Remove items covering the same event using keyword overlap in titles."""
-        result = []
+    # Generic words that look like proper nouns but carry no event identity.
+    # Lowercased on lookup, so list them lowercase here.
+    _ENTITY_STOPWORDS = frozenset(w.lower() for w in {
+        # Short acronyms / common words
+        "AI", "IO", "API", "LLM", "GPT", "US", "USA", "CEO", "CTO", "CFO",
+        "AGI", "ML", "VR", "AR", "I", "O", "THE", "AND", "FOR", "NEW",
+        "HOW", "WHY", "WHAT", "DAY", "TOP", "BIG", "GPU", "CPU", "OS",
+        # Long but non-distinctive words that wrongly read as proper nouns
+        # (capitalized in clickbait titles). These must NOT be strong entities.
+        "CHINA", "CHINESE", "AMERICA", "AMERICAN", "STRONG", "ROBOT",
+        "ROBOTS", "BILLION", "MILLION", "TRILLION", "MODEL", "MODELS",
+        "TECH", "DATA", "AGENT", "AGENTS", "STARTUP", "STARTUPS",
+        "JUST", "BEAST", "MODE", "GAME", "CHANGER", "EVERYTHING",
+        "COMPANIES", "COMPANY", "INDUSTRY", "FUTURE", "WORLD", "HUMAN",
+        "HUMANOID", "POWER", "MARKET", "GROWTH", "OPENING", "REMARKS",
+        "KEYNOTE", "RELEASED", "RELEASE", "UPGRADED", "DANGERS",
+    })
+
+    # Generic Chinese terms that recur across unrelated events — weak signal.
+    _CN_STOPWORDS = frozenset({
+        "人工智能", "机器人", "大模型", "产业大会", "办公室", "开发者",
+        "知情人士", "互联网", "科技股", "全球史", "运营中心",
+    })
+
+    @classmethod
+    def _extract_entities(cls, item: dict) -> tuple[set[str], set[str]]:
+        """Extract named entities from title + summary, split by strength.
+
+        Returns (strong, weak). Strong entities are distinctive product /
+        company / proper names; weak ones are short or generic tokens. Two
+        items count as the same event only if they share a STRONG entity
+        (see _deduplicate) — this stops generic words like "AI" + a year
+        from falsely merging unrelated stories.
+
+        Title alone is unreliable (creators write clickbait variants of the
+        same news), so the summary — which states the actual facts — is
+        also folded in.
+        """
+        text = f"{item.get('title', '')} {item.get('summary', '')}"
+        strong: set[str] = set()
+        weak: set[str] = set()
+
+        # English proper-noun tokens: capitalized words / alphanumeric model
+        # names. Tokenized word-by-word so a shared anchor ("Google", "I/O")
+        # survives even when surrounding clickbait differs across creators.
+        for word in re.findall(r"[A-Za-z][A-Za-z0-9]*(?:/[A-Za-z0-9]+)*", text):
+            norm = re.sub(r"[^a-z0-9]", "", word.lower())  # "I/O" -> "io"
+            if not norm or norm in cls._ENTITY_STOPWORDS:
+                continue
+            if not word[0].isupper():
+                continue
+            # >=4 chars -> distinctive proper noun; shorter -> weak.
+            (strong if len(norm) >= 4 else weak).add(norm)
+
+        # Numeric tokens (years, versions) are weak on their own — only
+        # meaningful glued to a product name, which the regex above already
+        # captures (e.g. "Gemini3").
+        for num in re.findall(r"\b\d[\d.]*\b", text):
+            weak.add(num.replace(".", ""))
+
+        # Chinese product/company terms. Generic ones go to weak.
+        for token in re.findall(r"[一-鿿]{3,8}", text):
+            (weak if token in cls._CN_STOPWORDS else strong).add(token)
+
+        return strong, weak
+
+    @classmethod
+    def _deduplicate(cls, items: list[dict]) -> list[dict]:
+        """Collapse items covering the same event via shared named entities.
+
+        Items are pre-sorted by quality_score (desc), so the first item of
+        each event cluster is the strongest one and is the one we keep.
+        Weaker duplicates are recorded in `merged_from` for optional display.
+        """
+        result: list[dict] = []
+        kept_entities: list[tuple[set[str], set[str]]] = []
+
         for item in items:
-            title_words = set(re.findall(r"\w+", item.get("title", "").lower()))
-            is_dup = False
-            for existing in result:
-                existing_words = set(re.findall(r"\w+", existing.get("title", "").lower()))
-                if not title_words or not existing_words:
-                    continue
-                overlap = len(title_words & existing_words)
-                similarity = overlap / min(len(title_words), len(existing_words))
-                if similarity > 0.5:
-                    is_dup = True
+            strong, weak = cls._extract_entities(item)
+            dup_of = None
+            for kept, (k_strong, k_weak) in zip(result, kept_entities):
+                # Same event requires:
+                #  - at least one shared STRONG entity (distinctive name), AND
+                #  - total overlap (strong + weak) >= 2.
+                # The strong requirement blocks "AI" + year false merges;
+                # the total>=2 requirement avoids merging on a single
+                # incidentally-shared name.
+                shared_strong = strong & k_strong
+                shared_total = shared_strong | (weak & k_weak)
+                if shared_strong and len(shared_total) >= 2:
+                    dup_of = kept
                     break
-            if not is_dup:
+            if dup_of is not None:
+                dup_of.setdefault("merged_from", []).append({
+                    "title": item.get("title", ""),
+                    "url": item.get("url", ""),
+                    "channel": item.get("channel", ""),
+                })
+            else:
                 result.append(item)
+                kept_entities.append((strong, weak))
         return result
 
     def _select_top(self, scored: list[dict]) -> list[dict]:
