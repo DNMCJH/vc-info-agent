@@ -125,15 +125,24 @@ def main():
 
     # Step 3: Filter
     logger.info("Step 3/5: Filtering content...")
+    from llm_dedup import LLMDeduplicator
     content_filter = ContentFilter(config)
-    filtered_items = content_filter.filter(all_items)
+    llm_dedup = LLMDeduplicator(config)
+    try:
+        filtered_items = content_filter.filter(all_items, llm_dedup=llm_dedup)
+    finally:
+        llm_dedup.close()
     logger.info(f"Filtered to {len(filtered_items)} high-quality items")
 
     if not filtered_items:
         logger.warning("No items passed quality filter. Lowering threshold.")
         config.quality_threshold = 20
         content_filter = ContentFilter(config)
-        filtered_items = content_filter.filter(all_items)
+        llm_dedup = LLMDeduplicator(config)
+        try:
+            filtered_items = content_filter.filter(all_items, llm_dedup=llm_dedup)
+        finally:
+            llm_dedup.close()
 
     # Assign stable item_id to each selected item
     for item in filtered_items:
@@ -279,15 +288,20 @@ def _append_report_log(
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-def dry_run():
-    """Collect + dedup only — no LLM calls, no delivery.
+def dry_run(use_llm: bool = False):
+    """Collect + dedup only — no summary, no delivery.
 
-    Used to validate the event-level deduplication: prints each cluster so
-    the kept item and its merged_from duplicates can be inspected for false
-    merges (different events lumped together) or misses (real dupes left in).
+    use_llm=False: pure entity-overlap dedup (free, fast).
+    use_llm=True:  entity coarse-cluster + LLM refinement (small DeepSeek
+        spend, validates the production path before scheduling a real run).
+
+    Prints each cluster so the kept item and its merged_from duplicates
+    can be inspected for false merges (different events lumped together)
+    or misses (real dupes left in).
     """
     config = Config()
-    logger.info("=== VC Info Agent DRY RUN (collect + dedup only) ===")
+    mode = "LLM-refined" if use_llm else "entity-only"
+    logger.info(f"=== VC Info Agent DRY RUN ({mode} dedup) ===")
 
     all_items = []
     if config.youtube_api_key:
@@ -301,18 +315,26 @@ def dry_run():
         logger.warning("No items collected.")
         return
 
-    # Dedup runs on raw items; classify (LLM) is skipped, so domain may be
-    # absent — _score tolerates missing fields, but we only care about dedup.
+    # Score (domain may be absent — _score tolerates missing fields).
     content_filter = ContentFilter(config)
     scored = []
     for item in all_items:
         item["quality_score"] = content_filter._score(item)
         scored.append(item)
     scored.sort(key=lambda x: x["quality_score"], reverse=True)
-    deduped = content_filter._deduplicate(scored)
+
+    if use_llm:
+        from llm_dedup import LLMDeduplicator
+        llm_dedup = LLMDeduplicator(config)
+        try:
+            deduped = llm_dedup.refine(scored)
+        finally:
+            llm_dedup.close()
+    else:
+        deduped = content_filter._deduplicate(scored)
 
     print(f"\n{'='*70}")
-    print(f"DEDUP: {len(scored)} items -> {len(deduped)} clusters")
+    print(f"DEDUP ({mode}): {len(scored)} items -> {len(deduped)} clusters")
     print(f"{'='*70}")
     for item in deduped:
         merged = item.get("merged_from", [])
@@ -331,10 +353,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="VC Info Agent")
     parser.add_argument(
         "--dry-run", action="store_true",
-        help="Collect + dedup only; no LLM calls, no delivery (dedup validation)",
+        help="Collect + entity-only dedup; no LLM, no delivery",
+    )
+    parser.add_argument(
+        "--dry-run-llm", action="store_true",
+        help="Collect + entity coarse-cluster + LLM refinement; no delivery",
     )
     args = parser.parse_args()
-    if args.dry_run:
-        dry_run()
+    if args.dry_run_llm:
+        dry_run(use_llm=True)
+    elif args.dry_run:
+        dry_run(use_llm=False)
     else:
         main()

@@ -17,7 +17,13 @@ class ContentFilter:
         self.config = config
         self.feedback = FeedbackStore()
 
-    def filter(self, items: list[dict]) -> list[dict]:
+    def filter(self, items: list[dict], llm_dedup=None) -> list[dict]:
+        """Score → threshold → dedup → top-N selection.
+
+        If llm_dedup is provided (an LLMDeduplicator instance), event-level
+        dedup uses LLM refinement on coarse entity clusters; otherwise it
+        falls back to entity-only matching (cheaper, more false merges).
+        """
         scored = []
         for item in items:
             score = self._score(item)
@@ -26,7 +32,10 @@ class ContentFilter:
                 scored.append(item)
 
         scored.sort(key=lambda x: x["quality_score"], reverse=True)
-        deduped = self._deduplicate(scored)
+        if llm_dedup is not None:
+            deduped = llm_dedup.refine(scored)
+        else:
+            deduped = self._deduplicate(scored)
 
         result = self._select_top(deduped)
         logger.info(
