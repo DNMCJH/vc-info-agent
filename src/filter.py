@@ -37,6 +37,15 @@ class ContentFilter:
         else:
             deduped = self._deduplicate(scored)
 
+        # Post-dedup: boost items that absorbed duplicates (multi-source
+        # coverage signals industry-wide attention). Capped at +5 to stay
+        # within the Engagement dimension's 20-point budget.
+        for item in deduped:
+            n_merged = len(item.get("merged_from", []))
+            if n_merged > 0:
+                item["quality_score"] += min(n_merged * 2, 5)
+        deduped.sort(key=lambda x: x["quality_score"], reverse=True)
+
         result = self._select_top(deduped)
         logger.info(
             f"Filtered {len(items)} → {len(scored)} above threshold → {len(deduped)} after dedup → {len(result)} selected"

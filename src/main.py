@@ -299,6 +299,13 @@ def dry_run(use_llm: bool = False):
     can be inspected for false merges (different events lumped together)
     or misses (real dupes left in).
     """
+    # Windows consoles default to GBK, which chokes on emoji and some
+    # CJK punctuation. Force UTF-8 for the validation report.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
     config = Config()
     mode = "LLM-refined" if use_llm else "entity-only"
     logger.info(f"=== VC Info Agent DRY RUN ({mode} dedup) ===")
