@@ -14,7 +14,8 @@ body {
   max-width: 640px;
   margin: 0 auto;
   padding: 24px 20px;
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.65;
 }
 
 .header {
@@ -33,10 +34,11 @@ body {
 }
 
 .title {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
   color: #1a1714;
   margin-bottom: 8px;
+  line-height: 1.3;
 }
 
 .meta {
@@ -80,53 +82,81 @@ audio {
 }
 
 .tldr-item {
-  font-size: 14px;
+  font-size: 15px;
   color: #4a4540;
   line-height: 1.7;
 }
 
-/* Domain sections */
+/* Domain sections — color-coded via CSS variables */
 .domain-section {
-  margin-bottom: 28px;
+  margin-bottom: 32px;
+  --accent: #d97706;
+  --accent-dark: #92400e;
+  --accent-bg: #fef3e7;
 }
+.domain-section.ai    { --accent: #d97706; --accent-dark: #92400e; --accent-bg: #fef3e7; }
+.domain-section.chip  { --accent: #2563eb; --accent-dark: #1d4ed8; --accent-bg: #eff6ff; }
+.domain-section.robot { --accent: #059669; --accent-dark: #047857; --accent-bg: #ecfdf5; }
 
 .domain-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e8e0d4;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: var(--accent-bg);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
 }
 
 .domain-header h2 {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
-  color: #1a1714;
+  color: var(--accent-dark);
 }
 
 .domain-count {
   font-size: 12px;
-  color: #9b8b75;
-  background: #efe8dc;
-  padding: 2px 8px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--accent);
+  padding: 2px 9px;
   border-radius: 10px;
 }
 
-/* Item cards */
+/* Item cards — numbered badge + accent border */
 .item-card {
+  position: relative;
   background: #ffffff;
   border-radius: 10px;
-  padding: 16px 18px;
+  padding: 16px 18px 16px 52px;
   margin-bottom: 12px;
-  border-left: 3px solid #d97706;
+  border-left: 3px solid var(--accent);
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
+.item-num {
+  position: absolute;
+  left: 14px;
+  top: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 .item-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   margin-bottom: 6px;
+  line-height: 1.4;
 }
 
 .item-title a {
@@ -135,7 +165,7 @@ audio {
 }
 
 .item-title a:hover {
-  color: #b45309;
+  color: var(--accent-dark);
 }
 
 .item-source {
@@ -145,14 +175,18 @@ audio {
 }
 
 .item-summary {
-  font-size: 14px;
+  font-size: 15px;
   color: #4a4540;
+  line-height: 1.7;
   margin-bottom: 8px;
 }
 
 .item-why {
-  font-size: 13px;
-  color: #b45309;
+  font-size: 14px;
+  color: var(--accent-dark);
+  background: var(--accent-bg);
+  padding: 8px 12px;
+  border-radius: 6px;
   margin-bottom: 10px;
 }
 
@@ -175,15 +209,15 @@ audio {
 }
 
 .fb-btn:hover {
-  background: #f0ebe3;
-  border-color: #d97706;
-  color: #b45309;
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-dark);
 }
 
 .fb-btn.active {
-  background: #d97706;
+  background: var(--accent);
   color: #ffffff;
-  border-color: #d97706;
+  border-color: var(--accent);
 }
 
 .fb-btn:disabled {
@@ -251,14 +285,16 @@ audio {
 </div>
 {% endif %}
 
+{% set domain_class = {'AI': 'ai', '芯片': 'chip', '机器人': 'robot'} %}
 {% for domain, items in grouped_items %}
-<div class="domain-section">
+<div class="domain-section {{ domain_class.get(domain, '') }}">
   <div class="domain-header">
     <h2>{{ domain_emoji[domain] }} {{ domain }}</h2>
     <span class="domain-count">{{ items|length }}</span>
   </div>
   {% for item in items %}
   <div class="item-card" id="item-{{ item.item_id }}">
+    <div class="item-num">{{ loop.index }}</div>
     <div class="item-title">
       <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
     </div>
