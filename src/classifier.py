@@ -77,6 +77,8 @@ def _llm_classify(items: list[dict], config: Config) -> list[dict]:
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.1,
                 "max_tokens": 2000,
+                # v4-flash defaults to thinking mode (empty content); disable it.
+                "thinking": {"type": "disabled"},
             },
         )
         resp.raise_for_status()

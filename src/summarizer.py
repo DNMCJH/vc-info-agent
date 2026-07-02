@@ -229,6 +229,8 @@ class Summarizer:
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.3,
                 "max_tokens": 500,
+                # v4-flash defaults to thinking mode (empty content); disable it.
+                "thinking": {"type": "disabled"},
             },
         )
         resp.raise_for_status()

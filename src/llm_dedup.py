@@ -166,6 +166,8 @@ class LLMDeduplicator:
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.1,
                 "max_tokens": 200,
+                # v4-flash defaults to thinking mode (empty content); disable it.
+                "thinking": {"type": "disabled"},
             },
         )
         resp.raise_for_status()
