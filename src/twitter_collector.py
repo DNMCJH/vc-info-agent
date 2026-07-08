@@ -33,6 +33,10 @@ TWITTER_KOLS = {
 }
 
 
+class TwitterAccessError(RuntimeError):
+    """Raised when the configured X API plan cannot read requested resources."""
+
+
 class TwitterCollector:
     """Collects recent tweets from configured KOL accounts."""
 
@@ -52,6 +56,9 @@ class TwitterCollector:
             try:
                 items = self._fetch_user_tweets(handle, name, domain, cutoff)
                 all_items.extend(items)
+            except TwitterAccessError as e:
+                logger.warning(f"Twitter disabled for this run: {e}")
+                break
             except Exception as e:
                 logger.warning(f"Twitter @{handle} failed: {e}")
 
@@ -111,6 +118,8 @@ class TwitterCollector:
     def _get_user_id(self, handle: str) -> str | None:
         url = f"{TWITTER_API_BASE}/users/by/username/{handle}"
         resp = httpx.get(url, headers=self.headers, timeout=10)
+        if resp.status_code == 402:
+            raise TwitterAccessError("X API returned 402 Payment Required")
         if resp.status_code != 200:
             logger.warning(f"Cannot resolve @{handle}: {resp.status_code}")
             return None
