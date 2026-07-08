@@ -153,8 +153,9 @@ class FeedbackHandler(BaseHTTPRequestHandler):
 
 def main():
     port = int(os.getenv("FEEDBACK_PORT", "9002"))
-    server = HTTPServer(("0.0.0.0", port), FeedbackHandler)
-    logger.info(f"Feedback server running on http://0.0.0.0:{port}")
+    # Bind to loopback only; nginx (sites-enabled/vcbrief) reverse-proxies 9002.
+    server = HTTPServer(("127.0.0.1", port), FeedbackHandler)
+    logger.info(f"Feedback server running on http://127.0.0.1:{port}")
     logger.info("Press Ctrl+C to stop")
     try:
         server.serve_forever()
