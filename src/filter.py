@@ -16,6 +16,7 @@ class ContentFilter:
     def __init__(self, config: Config):
         self.config = config
         self.feedback = FeedbackStore()
+        self.last_debug: dict = {}
 
     def filter(self, items: list[dict], llm_dedup=None) -> list[dict]:
         """Score → threshold → dedup → top-N selection.
@@ -25,11 +26,16 @@ class ContentFilter:
         falls back to entity-only matching (cheaper, more false merges).
         """
         scored = []
+        below_threshold = []
         for item in items:
             score = self._score(item)
             item["quality_score"] = score
             if score >= self.config.quality_threshold:
                 scored.append(item)
+            else:
+                item["rejection_stage"] = "quality_threshold"
+                item["rejection_reason"] = f"score {score} < threshold {self.config.quality_threshold}"
+                below_threshold.append(item)
 
         scored.sort(key=lambda x: x["quality_score"], reverse=True)
         if llm_dedup is not None:
@@ -47,6 +53,22 @@ class ContentFilter:
         deduped.sort(key=lambda x: x["quality_score"], reverse=True)
 
         result = self._select_top(deduped)
+        selected_keys = {self._item_key(item) for item in result}
+        dropped_after_dedup = []
+        for item in deduped:
+            if self._item_key(item) in selected_keys:
+                continue
+            item["rejection_stage"] = "selection_limit"
+            item["rejection_reason"] = "per-domain, per-source, or total item limit"
+            dropped_after_dedup.append(item)
+
+        self.last_debug = {
+            "scored": scored + below_threshold,
+            "above_threshold": scored,
+            "deduped": deduped,
+            "selected": result,
+            "rejected": below_threshold + dropped_after_dedup,
+        }
         logger.info(
             f"Filtered {len(items)} → {len(scored)} above threshold → {len(deduped)} after dedup → {len(result)} selected"
         )
@@ -55,6 +77,7 @@ class ContentFilter:
     def _score(self, item: dict) -> int:
         """Calculate quality score (0-100) across 6 dimensions + feedback adjustment."""
         score = 0
+        text = f"{item.get('title', '')} {item.get('description', '')}".lower()
 
         # Source credibility (25%)
         if item.get("channel", "") in self.config.kol_whitelist:
@@ -100,12 +123,12 @@ class ContentFilter:
             score += 3
 
         # Keyword relevance (20%)
-        text = f"{item.get('title', '')} {item.get('description', '')}".lower()
         all_keywords = []
         for kws in self.config.domain_keywords.values():
             all_keywords.extend(kws)
         hits = sum(1 for kw in all_keywords if kw.lower() in text)
-        if hits == 0:
+        major_signal = self._major_signal_score(item, text)
+        if hits == 0 and major_signal == 0:
             return 0
         score += min(hits * 5, 20)
 
@@ -132,10 +155,55 @@ class ContentFilter:
         if re.search(r"bit\.ly|utm_|affiliate", text):
             score -= 15
 
+        # Major first-party sources and material event terms should not be
+        # crowded out by broad YouTube keyword-search noise.
+        score += major_signal
+        score -= self._noise_source_penalty(item, text)
+
         # Historical feedback adjustment (replaces old shallow source/domain weight)
         score += self.feedback.get_item_adjustment(item)
 
         return max(score, 0)
+
+    def _major_signal_score(self, item: dict, text: str) -> int:
+        score = 0
+        channel = item.get("channel", "")
+        category = item.get("source_category", "")
+        priority = item.get("source_priority", "")
+
+        if channel in self.config.major_sources:
+            score += 10
+        if category == "power_center":
+            score += 10
+        elif category in {"builder_practitioner", "educator_curator", "vc_startup"}:
+            score += 5
+
+        score += {"P0": 8, "P1": 4}.get(priority, 0)
+        keyword_hits = sum(1 for kw in self.config.major_keywords if kw.lower() in text)
+        score += min(keyword_hits * 3, 12)
+        return min(score, 30)
+
+    def _noise_source_penalty(self, item: dict, text: str) -> int:
+        channel = item.get("channel", "").lower()
+        configured_hits = sum(
+            1 for noise in self.config.noise_channels if noise.lower() in channel
+        )
+        generic_noise = (
+            "gaming",
+            "benchmark",
+            "unboxing",
+            "stock",
+            "股市",
+            "投顾",
+            "政经",
+            "政治",
+        )
+        generic_hits = sum(1 for token in generic_noise if token in channel or token in text)
+        return min((configured_hits + generic_hits) * 12, 36)
+
+    @staticmethod
+    def _item_key(item: dict) -> str:
+        return item.get("item_id") or item.get("url") or item.get("article_id") or item.get("title", "")
 
     # Generic words that look like proper nouns but carry no event identity.
     # Lowercased on lookup, so list them lowercase here.

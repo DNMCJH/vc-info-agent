@@ -49,6 +49,24 @@ def run_pipeline():
         logger.error(f"Pipeline error: {e}")
 
 
+def run_breaking_check():
+    logger.info("Scheduler triggered — running breaking check...")
+    try:
+        result = subprocess.run(
+            [PYTHON, MAIN_SCRIPT, "--breaking-check"],
+            capture_output=True, text=True, timeout=480,
+            cwd=SRC_DIR,
+        )
+        if result.returncode == 0:
+            logger.info("Breaking check completed successfully")
+        else:
+            logger.error(f"Breaking check failed (exit {result.returncode}): {result.stderr[-500:]}")
+    except subprocess.TimeoutExpired:
+        logger.error("Breaking check timed out after 8 minutes")
+    except Exception as e:
+        logger.error(f"Breaking check error: {e}")
+
+
 def main():
     scheduler = BlockingScheduler()
 
@@ -59,8 +77,20 @@ def main():
         id="daily_briefing",
         name="Daily VC Briefing",
     )
+    scheduler.add_job(
+        run_breaking_check,
+        CronTrigger(hour=12, minute=30),
+        id="midday_breaking_check",
+        name="Midday Breaking Check",
+    )
+    scheduler.add_job(
+        run_breaking_check,
+        CronTrigger(hour=18, minute=30),
+        id="evening_breaking_check",
+        name="Evening Breaking Check",
+    )
 
-    logger.info("Scheduler started — briefing will run daily at 08:00")
+    logger.info("Scheduler started — briefing runs daily at 08:00; breaking checks at 12:30 and 18:30")
     logger.info("Press Ctrl+C to stop")
 
     # Run on startup only if today's briefing hasn't been generated yet

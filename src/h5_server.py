@@ -1,4 +1,4 @@
-"""H5 briefing server — serves detail pages, audio, and feedback API."""
+"""H5 briefing server — serves detail pages, public JSON APIs, and feedback API."""
 
 import json
 import logging
@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
@@ -24,6 +25,15 @@ WEEKDAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"
 
 app = FastAPI(title="VC Briefing H5")
 
+# Public read APIs are intended to be consumed by a thin frontend on another
+# domain, such as vc.vivianai.cn. Keep feedback POST simple for the MVP too.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
 # Serve audio files
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/audio", StaticFiles(directory=str(AUDIO_DIR)), name="audio")
@@ -36,13 +46,97 @@ app.mount("/cards", StaticFiles(directory=str(CARDS_DIR)), name="cards")
 env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
 
 
-@app.get("/briefing/{date_str}", response_class=HTMLResponse)
-async def briefing_page(date_str: str):
+def _briefing_files() -> list[Path]:
+    """Return regular daily briefing JSON files, newest date first."""
+    return sorted(BRIEFINGS_DIR.glob("briefing_*.json"), reverse=True)
+
+
+def _load_briefing(date_str: str) -> dict | None:
+    """Load one daily briefing by date, or None when missing/invalid."""
     json_path = BRIEFINGS_DIR / f"briefing_{date_str}.json"
     if not json_path.exists():
+        return None
+    try:
+        return json.loads(json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        logger.warning("Failed to read briefing %s: %s", json_path, exc)
+        return None
+
+
+def _briefing_summary(data: dict) -> dict:
+    """Build a compact list item for archives and index pages."""
+    date_str = data.get("date", "")
+    items = data.get("items", [])
+    top_titles = [item.get("title", "") for item in items[:3] if item.get("title")]
+    return {
+        "briefing_id": data.get("briefing_id", f"briefing_{date_str}"),
+        "date": date_str,
+        "generated_at": data.get("generated_at", ""),
+        "total_collected": data.get("total_collected", 0),
+        "selected_count": data.get("selected_count", len(items)),
+        "tldr": data.get("tldr", ""),
+        "trend_insight": data.get("trend_insight", ""),
+        "top_titles": top_titles,
+        "html_url": f"/briefing/{date_str}" if date_str else "",
+        "api_url": f"/api/briefing/{date_str}" if date_str else "",
+    }
+
+
+@app.get("/", response_class=HTMLResponse)
+async def latest_frontend():
+    """Minimal frontend that fetches the public JSON API client-side."""
+    template = env.get_template("vc_latest.html")
+    return HTMLResponse(template.render())
+
+
+@app.get("/api/briefings")
+async def list_briefings(limit: int = 30):
+    """List available daily briefings for a thin external frontend."""
+    limit = max(1, min(limit, 100))
+    summaries = []
+    for path in _briefing_files()[:limit]:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            logger.warning("Skipping invalid briefing %s: %s", path, exc)
+            continue
+        summaries.append(_briefing_summary(data))
+    return JSONResponse({"count": len(summaries), "items": summaries})
+
+
+@app.get("/api/latest")
+async def latest_briefing():
+    """Return the newest daily briefing JSON plus display links."""
+    for path in _briefing_files():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            logger.warning("Skipping invalid briefing %s: %s", path, exc)
+            continue
+        date_str = data.get("date", "")
+        data.setdefault("html_url", f"/briefing/{date_str}" if date_str else "")
+        data.setdefault("api_url", f"/api/briefing/{date_str}" if date_str else "")
+        return JSONResponse(data)
+    return JSONResponse({"error": "no briefing found"}, status_code=404)
+
+
+@app.get("/api/briefing/{date_str}")
+async def briefing_json(date_str: str):
+    """Return one daily briefing JSON by date."""
+    data = _load_briefing(date_str)
+    if data is None:
+        return JSONResponse({"error": "briefing not found"}, status_code=404)
+    data.setdefault("html_url", f"/briefing/{date_str}")
+    data.setdefault("api_url", f"/api/briefing/{date_str}")
+    return JSONResponse(data)
+
+
+@app.get("/briefing/{date_str}", response_class=HTMLResponse)
+async def briefing_page(date_str: str):
+    data = _load_briefing(date_str)
+    if data is None:
         return HTMLResponse("<h1>Briefing not found</h1>", status_code=404)
 
-    data = json.loads(json_path.read_text(encoding="utf-8"))
     template = env.get_template("briefing.html")
 
     # Prepare template context

@@ -110,6 +110,7 @@ source_pool:
     name: Andrej Karpathy
     platform: youtube
     handle: "@AndrejKarpathy"
+    channel_id: UCWN3xxRkmTPphiiT85nO_A
     url: "https://www.youtube.com/@AndrejKarpathy"
     category: builder_practitioner
     cognitive_role: "LLM engineering, AI education, developer practice"
@@ -212,6 +213,7 @@ source_pool:
     name: Lilian Weng
     platform: website
     url: "https://lilianweng.github.io/"
+    rss_url: "https://lilianweng.github.io/index.xml"
     category: educator_curator
     cognitive_role: "Deep technical surveys, LLM internals, research synthesis"
     priority: P0
@@ -382,6 +384,7 @@ source_pool:
     name: Lex Fridman
     platform: youtube
     handle: "@lexfridman"
+    channel_id: UCSHZKyawb7irstQKVo4z0jw
     url: "https://www.youtube.com/@lexfridman"
     category: educator_curator
     cognitive_role: "Long-form AI interviews, industry leaders, philosophy"

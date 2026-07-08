@@ -25,9 +25,10 @@ class YouTubeCollector:
         since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
 
         # Mode 1: Channel subscriptions (low API cost, high precision)
-        for channel_id, domain in self.config.youtube_channels.items():
+        for channel_id, channel_cfg in self.config.youtube_channels.items():
             try:
-                items = self._collect_from_channel(channel_id, domain, since)
+                domain, source_meta = self._channel_runtime_config(channel_id, channel_cfg)
+                items = self._collect_from_channel(channel_id, domain, since, source_meta)
                 all_items.extend(items)
             except Exception as e:
                 logger.warning(f"Failed channel {channel_id}: {e}")
@@ -51,7 +52,9 @@ class YouTubeCollector:
         logger.info(f"Collected {len(unique)} unique videos from YouTube")
         return unique
 
-    def _collect_from_channel(self, channel_id: str, domain: str, since: str) -> list[dict]:
+    def _collect_from_channel(
+        self, channel_id: str, domain: str, since: str, source_meta: dict | None = None
+    ) -> list[dict]:
         """Fetch recent videos from a specific channel's uploads playlist."""
         ch_resp = self.youtube.channels().list(
             part="contentDetails", id=channel_id,
@@ -74,7 +77,7 @@ class YouTubeCollector:
         if not video_ids:
             return []
 
-        return self._fetch_video_details(video_ids, domain)
+        return self._fetch_video_details(video_ids, domain, source_meta)
 
     def _search(self, keyword: str, since: str, domain: str) -> list[dict]:
         resp = self.youtube.search().list(
@@ -89,7 +92,9 @@ class YouTubeCollector:
 
         return self._fetch_video_details(video_ids, domain)
 
-    def _fetch_video_details(self, video_ids: list[str], domain: str) -> list[dict]:
+    def _fetch_video_details(
+        self, video_ids: list[str], domain: str, source_meta: dict | None = None
+    ) -> list[dict]:
         """Fetch full details for a list of video IDs."""
         details = self.youtube.videos().list(
             part="snippet,statistics,contentDetails",
@@ -100,7 +105,7 @@ class YouTubeCollector:
         for video in details.get("items", []):
             snippet = video["snippet"]
             stats = video.get("statistics", {})
-            results.append({
+            item = {
                 "video_id": video["id"],
                 "title": _t2s.convert(snippet["title"]),
                 "channel": _t2s.convert(snippet["channelTitle"]),
@@ -114,8 +119,22 @@ class YouTubeCollector:
                 "domain": domain,
                 "source": "YouTube",
                 "transcript": _t2s.convert(self._get_transcript(video["id"])),
-            })
+            }
+            if source_meta:
+                item.update(source_meta)
+            results.append(item)
         return results
+
+    @staticmethod
+    def _channel_runtime_config(channel_id: str, channel_cfg) -> tuple[str, dict]:
+        if isinstance(channel_cfg, dict):
+            return channel_cfg.get("domain", "AI"), {
+                "source_id": channel_cfg.get("source_id", ""),
+                "source_category": channel_cfg.get("source_category", ""),
+                "source_priority": channel_cfg.get("source_priority", ""),
+                "source_pool_name": channel_cfg.get("name", ""),
+            }
+        return channel_cfg, {"source_id": channel_id}
 
     def _get_transcript(self, video_id: str) -> str:
         try:

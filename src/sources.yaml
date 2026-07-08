@@ -230,3 +230,51 @@ spam_keywords:
   - graphics card review
   - overclock
   - graphics card
+
+# 重大消息源 — 命中这些来源时额外加权，避免被泛 YouTube 搜索噪声挤掉
+major_sources:
+  - OpenAI
+  - Anthropic
+  - Google DeepMind
+  - NVIDIA Newsroom
+  - NVIDIA
+  - Microsoft
+  - Apple
+  - Meta
+  - Y Combinator
+  - a16z
+  - LangChain
+  - Hugging Face
+
+# 重大事件关键词 — 用于日报加权和午/晚快讯筛选
+major_keywords:
+  - launch
+  - release
+  - announces
+  - open source
+  - funding
+  - acquires
+  - partnership
+  - model
+  - API
+  - agent
+  - reasoning
+  - 发布
+  - 融资
+  - 收购
+  - 开源
+  - 模型
+  - 芯片
+  - 机器人
+
+# 噪声频道/来源关键词 — 命中则降权，但不直接拉黑
+noise_channels:
+  - gaming
+  - benchmark
+  - unboxing
+  - graphics card
+  - 股市
+  - 投顾
+  - 政经
+  - 政治
+  - 新闻搬运

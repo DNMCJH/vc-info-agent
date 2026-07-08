@@ -12,3 +12,6 @@ build/
 # Runtime data (feedback, briefings, logs)
 data/
 sample_output/
+
+# codegraph index (local-only, do not commit)
+.codegraph/
