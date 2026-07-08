@@ -134,7 +134,11 @@ class TwitterCollector:
         if resp.status_code == 429:
             logger.warning(f"TikHub rate limited on @{handle}, skipping rest")
             return [], None
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            # TikHub occasionally returns 400/5xx when its upstream scrape flakes;
+            # stop paging this account but keep whatever earlier pages produced.
+            logger.warning(f"TikHub {resp.status_code} on @{handle}, stopping paging")
+            return [], None
 
         data = resp.json().get("data", {}) or {}
         return data.get("timeline", []) or [], data.get("next_cursor")
