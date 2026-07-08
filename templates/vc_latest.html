@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VC Agent 最新简报</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f7f2ea;
+  color: #211c18;
+  line-height: 1.65;
+}
+.page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 32px 18px 56px;
+}
+.hero {
+  border: 1px solid #eadfce;
+  background: linear-gradient(135deg, #fffaf2 0%, #f2e6d4 100%);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 16px 42px rgba(74, 55, 33, 0.08);
+}
+.eyebrow {
+  color: #9b6b2f;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 10px 0 8px;
+  font-size: clamp(30px, 6vw, 52px);
+  line-height: 1.08;
+}
+.subtitle {
+  margin: 0;
+  max-width: 680px;
+  color: #675a4c;
+  font-size: 16px;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.update-line {
+  margin-top: 10px;
+  color: #7b6a58;
+  font-size: 13px;
+}
+.pill {
+  border: 1px solid #e2d2bd;
+  background: rgba(255,255,255,0.6);
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: #6b4b25;
+  font-size: 13px;
+}
+.section {
+  margin-top: 22px;
+  border: 1px solid #eadfce;
+  background: #fffaf4;
+  border-radius: 20px;
+  padding: 22px;
+}
+.section h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+.tldr {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tldr li, .item {
+  background: #ffffff;
+  border: 1px solid #efe5d8;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.item-title {
+  display: block;
+  color: #1f2937;
+  font-weight: 700;
+  text-decoration: none;
+  margin-bottom: 6px;
+}
+.item-title:hover { color: #b45309; }
+.source {
+  color: #9b8b75;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.publish-time {
+  color: #8b735c;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.summary {
+  color: #4b4036;
+  font-size: 14px;
+  margin: 0;
+}
+.why {
+  color: #8a4b12;
+  background: #fff3df;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: #171411;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+}
+.btn.secondary {
+  background: #fff;
+  color: #5f4525;
+  border: 1px solid #e2d2bd;
+}
+.empty, .error {
+  color: #7a6b5c;
+  padding: 20px;
+}
+.error {
+  color: #991b1b;
+}
+@media (max-width: 640px) {
+  .hero, .section { padding: 18px; border-radius: 18px; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <div class="eyebrow">VC Agent Briefing</div>
+    <h1>最新 VC / AI 简报</h1>
+    <p class="subtitle">这个页面由前端直接请求 VC agent 的公开 JSON API 渲染。第一版先展示最新日报，后续可以扩展历史日报、搜索、分类和实时信息流。</p>
+    <div class="meta" id="meta">
+      <span class="pill">加载中...</span>
+    </div>
+    <div class="update-line" id="update-line">内容范围加载中；每日 08:00 更新日报，12:30 和 18:30 检查重要更新并生成快讯。</div>
+    <div class="actions" id="actions"></div>
+  </section>
+
+  <section class="section" id="tldr-section">
+    <h2>速览</h2>
+    <div class="empty">正在读取最新日报...</div>
+  </section>
+
+  <section class="section" id="items-section">
+    <h2>精选条目</h2>
+    <div class="empty">正在读取精选条目...</div>
+  </section>
+
+  <section class="section" id="trend-section" hidden>
+    <h2>趋势洞察</h2>
+    <p id="trend"></p>
+  </section>
+</main>
+
+<script>
+const apiBase = new URLSearchParams(window.location.search).get("api") || "";
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function sameOriginUrl(path) {
+  if (!path) return "";
+  if (/^https?:\/\//.test(path)) return path;
+  return `${apiBase}${path}`;
+}
+
+function tldrLines(tldr) {
+  return String(tldr || "")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+}
+
+function formatDate(value) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value || "未知日期";
+  return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+}
+
+function previousDate(value) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  date.setDate(date.getDate() - 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "发布时间未知";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+async function loadLatest() {
+  const response = await fetch(`${apiBase}/api/latest`, { headers: { "Accept": "application/json" } });
+  if (!response.ok) throw new Error(`API ${response.status}`);
+  return response.json();
+}
+
+function render(data) {
+  const items = Array.isArray(data.items) ? data.items : [];
+  const startDate = previousDate(data.date);
+  document.getElementById("update-line").textContent = `内容范围：${formatDate(startDate)} - ${formatDate(data.date)}；每日 08:00 更新日报，12:30 和 18:30 检查重要更新并生成快讯。`;
+  document.getElementById("meta").innerHTML = `
+    <span class="pill">${escapeHtml(data.date || "未知日期")}</span>
+    <span class="pill">采集 ${escapeHtml(data.total_collected || 0)} 条</span>
+    <span class="pill">精选 ${escapeHtml(data.selected_count || items.length)} 条</span>
+  `;
+
+  document.getElementById("actions").innerHTML = `
+    <a class="btn" href="${escapeHtml(sameOriginUrl(data.html_url || `/briefing/${data.date}`))}">打开完整 H5 日报</a>
+    <a class="btn secondary" href="${escapeHtml(sameOriginUrl(data.api_url || `/api/briefing/${data.date}`))}">查看 JSON</a>
+  `;
+
+  const lines = tldrLines(data.tldr);
+  document.getElementById("tldr-section").innerHTML = `
+    <h2>速览</h2>
+    ${lines.length
+      ? `<ul class="tldr">${lines.map(line => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`
+      : `<div class="empty">暂无速览。</div>`}
+  `;
+
+  document.getElementById("items-section").innerHTML = `
+    <h2>精选条目</h2>
+    ${items.length
+      ? `<div class="grid">${items.map(item => `
+          <article class="item">
+            <a class="item-title" href="${escapeHtml(item.url || "#")}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title || "未命名条目")}</a>
+            <div class="source">${escapeHtml(item.domain || "其他")} · ${escapeHtml(item.channel || item.source || "未知来源")}</div>
+            <div class="publish-time">发布时间：${escapeHtml(formatDateTime(item.published_at))}</div>
+            <p class="summary">${escapeHtml(item.summary || "")}</p>
+            ${item.why_it_matters ? `<div class="why">💡 ${escapeHtml(item.why_it_matters)}</div>` : ""}
+          </article>
+        `).join("")}</div>`
+      : `<div class="empty">暂无精选条目。</div>`}
+  `;
+
+  if (data.trend_insight) {
+    document.getElementById("trend-section").hidden = false;
+    document.getElementById("trend").textContent = data.trend_insight;
+  }
+}
+
+loadLatest()
+  .then(render)
+  .catch(error => {
+    document.getElementById("meta").innerHTML = `<span class="pill">读取失败</span>`;
+    document.getElementById("tldr-section").innerHTML = `<div class="error">无法读取最新日报：${escapeHtml(error.message)}</div>`;
+    document.getElementById("items-section").innerHTML = "";
+  });
+</script>
+</body>
+</html>

@@ -29,6 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BRIEFINGS_DIR = Path(__file__).parent.parent / "data" / "briefings"
+PIPELINE_DEBUG_DIR = Path(__file__).parent.parent / "data" / "pipeline_debug"
 SEEN_DB = Path(__file__).parent.parent / "data" / "seen_articles.json"
 # Retain seen IDs for 30 days; collectors use shorter windows (e.g. WeChat 3-day),
 # so anything older than 30 days won't appear again anyway.
@@ -54,6 +55,7 @@ def _save_seen(db: Path, seen: dict[str, str]) -> None:
 
 def main():
     config = Config()
+    date_str = datetime.now().strftime("%Y-%m-%d")
 
     if not config.llm_api_key:
         logger.error("LLM_API_KEY not set. Check your .env file.")
@@ -67,36 +69,17 @@ def main():
     from delivery import FeishuDelivery
     from card_image import generate_card_image, generate_cover_image
     from tts import generate_audio
+    from wecom_broadcast import write_broadcast_file
 
     # Step 1: Collect from all sources
-    all_items = []
-
-    if config.youtube_api_key:
-        logger.info("Step 1a: Collecting from YouTube...")
-        yt_collector = YouTubeCollector(config)
-        yt_items = yt_collector.collect()
-        all_items.extend(yt_items)
-        logger.info(f"YouTube: {len(yt_items)} items")
-    else:
-        logger.warning("YOUTUBE_API_KEY not set, skipping YouTube")
-
-    logger.info("Step 1b: Collecting from RSS feeds...")
-    rss_collector = RSSCollector(config)
-    rss_items = rss_collector.collect()
-    all_items.extend(rss_items)
-
-    logger.info("Step 1c: Collecting from Twitter...")
-    twitter_collector = TwitterCollector(config)
-    twitter_items = twitter_collector.collect()
-    all_items.extend(twitter_items)
-
-    logger.info("Step 1d: Collecting from WeChat...")
-    wechat_collector = WechatCollector(config)
-    wechat_items = wechat_collector.collect()
-    all_items.extend(wechat_items)
+    all_items = _collect_sources(config)
 
     total_collected = len(all_items)
     logger.info(f"Total collected: {total_collected} items")
+    _save_pipeline_debug(date_str, "collected", all_items, {
+        "total_collected": total_collected,
+        "source_pool_stats": config.source_pool_stats,
+    })
 
     if not all_items:
         logger.warning("No items collected from any source.")
@@ -110,6 +93,11 @@ def main():
         skipped = before - len(all_items)
         if skipped:
             logger.info(f"Dedup: skipped {skipped} previously-delivered items ({before} → {len(all_items)})")
+        _save_pipeline_debug(date_str, "after_seen_dedup", all_items, {
+            "before": before,
+            "after": len(all_items),
+            "skipped": skipped,
+        })
 
     if not all_items:
         logger.warning("All collected items were already delivered before.")
@@ -121,6 +109,9 @@ def main():
     irrelevant_count = sum(1 for i in all_items if i.get("domain") == "irrelevant")
     if irrelevant_count:
         logger.info(f"Marked {irrelevant_count} items as irrelevant")
+    _save_pipeline_debug(date_str, "classified", all_items, {
+        "irrelevant_count": irrelevant_count,
+    })
     all_items = [i for i in all_items if i.get("domain") != "irrelevant"]
 
     # Step 3: Filter
@@ -133,6 +124,7 @@ def main():
     finally:
         llm_dedup.close()
     logger.info(f"Filtered to {len(filtered_items)} high-quality items")
+    filter_debug = content_filter.last_debug
 
     if not filtered_items:
         logger.warning("No items passed quality filter. Lowering threshold.")
@@ -143,6 +135,17 @@ def main():
             filtered_items = content_filter.filter(all_items, llm_dedup=llm_dedup)
         finally:
             llm_dedup.close()
+        filter_debug = content_filter.last_debug
+
+    _save_pipeline_debug(date_str, "scored", filter_debug.get("scored", []), {
+        "threshold": config.quality_threshold,
+        "above_threshold": len(filter_debug.get("above_threshold", [])),
+        "deduped": len(filter_debug.get("deduped", [])),
+        "selected": len(filtered_items),
+    })
+    _save_pipeline_debug(date_str, "rejected", filter_debug.get("rejected", []), {
+        "threshold": config.quality_threshold,
+    })
 
     # Assign stable item_id to each selected item
     for item in filtered_items:
@@ -162,7 +165,6 @@ def main():
     # Step 5: Output
     output_dir = Path(__file__).parent.parent / "sample_output"
     output_dir.mkdir(exist_ok=True)
-    date_str = datetime.now().strftime("%Y-%m-%d")
     output_path = output_dir / f"briefing_{date_str}.md"
     output_path.write_text(briefing_md, encoding="utf-8")
     logger.info(f"Markdown briefing saved to {output_path}")
@@ -174,6 +176,12 @@ def main():
         json.dumps(briefing_data, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     logger.info(f"JSON briefing saved to {json_path}")
+
+    # Prepare WeCom/WeChat customer-group broadcast copy.
+    # This is useful for Group Broadcast Assistant, API-created tasks, or SCRM SOP tools.
+    h5_base_for_broadcast = os.getenv("H5_BASE_URL", "https://vcbrief.site").rstrip("/")
+    broadcast_path = write_broadcast_file(briefing_data, output_dir, h5_base_url=h5_base_for_broadcast)
+    logger.info(f"WeCom broadcast text saved to {broadcast_path}")
 
     # Save full Markdown to data/briefings/ as well
     md_archive_path = BRIEFINGS_DIR / f"briefing_{date_str}.md"
@@ -288,6 +296,84 @@ def _append_report_log(
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+def _collect_sources(config: Config) -> list[dict]:
+    """Collect from every configured source type."""
+    all_items = []
+
+    if config.youtube_api_key:
+        logger.info("Step 1a: Collecting from YouTube...")
+        yt_collector = YouTubeCollector(config)
+        yt_items = yt_collector.collect()
+        all_items.extend(yt_items)
+        logger.info(f"YouTube: {len(yt_items)} items")
+    else:
+        logger.warning("YOUTUBE_API_KEY not set, skipping YouTube")
+
+    logger.info("Step 1b: Collecting from RSS feeds...")
+    rss_collector = RSSCollector(config)
+    rss_items = rss_collector.collect()
+    all_items.extend(rss_items)
+
+    logger.info("Step 1c: Collecting from Twitter...")
+    twitter_collector = TwitterCollector(config)
+    twitter_items = twitter_collector.collect()
+    all_items.extend(twitter_items)
+
+    logger.info("Step 1d: Collecting from WeChat...")
+    wechat_collector = WechatCollector(config)
+    wechat_items = wechat_collector.collect()
+    all_items.extend(wechat_items)
+
+    return all_items
+
+
+def _save_pipeline_debug(date_str: str, stage: str, items: list[dict], meta: dict | None = None) -> Path:
+    """Persist compact pipeline diagnostics for missed-item investigations."""
+    PIPELINE_DEBUG_DIR.mkdir(parents=True, exist_ok=True)
+    path = PIPELINE_DEBUG_DIR / f"{date_str}_{stage}.json"
+    payload = {
+        "date": date_str,
+        "stage": stage,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "meta": meta or {},
+        "count": len(items),
+        "items": [_compact_debug_item(item) for item in items],
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info(f"Pipeline debug saved: {path}")
+    return path
+
+
+def _compact_debug_item(item: dict) -> dict:
+    fields = [
+        "item_id",
+        "article_id",
+        "video_id",
+        "title",
+        "url",
+        "source",
+        "channel",
+        "domain",
+        "secondary_domains",
+        "source_authority",
+        "source_id",
+        "source_category",
+        "source_priority",
+        "quality_score",
+        "published_at",
+        "rejection_stage",
+        "rejection_reason",
+    ]
+    result = {field: item.get(field) for field in fields if item.get(field) not in (None, "")}
+    desc = item.get("description", "")
+    if desc:
+        result["description"] = desc[:300]
+    merged = item.get("merged_from", [])
+    if merged:
+        result["merged_from"] = merged[:5]
+    return result
+
+
 def dry_run(use_llm: bool = False):
     """Collect + dedup only — no summary, no delivery.
 
@@ -356,6 +442,131 @@ def dry_run(use_llm: bool = False):
     print(f"{'='*70}\n")
 
 
+def breaking_check(send: bool = True):
+    """Check high-authority sources for material updates between daily briefings."""
+    config = Config()
+    date_str = datetime.now().strftime("%Y-%m-%d")
+
+    if not config.llm_api_key:
+        logger.error("LLM_API_KEY not set. Check your .env file.")
+        sys.exit(1)
+
+    from classifier import classify_items
+    from delivery import FeishuDelivery
+
+    logger.info("=== VC Info Agent breaking check starting ===")
+    all_items = _collect_sources(config)
+    total_collected = len(all_items)
+    _save_pipeline_debug(date_str, "breaking_collected", all_items, {
+        "total_collected": total_collected,
+        "source_pool_stats": config.source_pool_stats,
+    })
+    if not all_items:
+        logger.warning("No items collected.")
+        return
+
+    seen = _load_seen(SEEN_DB)
+    if seen:
+        all_items = [i for i in all_items if i.get("article_id") not in seen]
+    if not all_items:
+        logger.info("No unseen items for breaking check.")
+        return
+
+    all_items = classify_items(all_items, config)
+    all_items = [i for i in all_items if i.get("domain") != "irrelevant"]
+
+    content_filter = ContentFilter(config)
+    candidates = []
+    for item in all_items:
+        item["quality_score"] = content_filter._score(item)
+        if _is_breaking_candidate(item, config):
+            item["item_id"] = item.get("item_id") or generate_item_id(item)
+            item["summary"] = item.get("description", "")[:120]
+            item["why_it_matters"] = "重大信号，建议及时关注原文。"
+            candidates.append(item)
+
+    candidates.sort(key=lambda x: x.get("quality_score", 0), reverse=True)
+    candidates = candidates[:5]
+    _save_pipeline_debug(date_str, "breaking_candidates", candidates, {
+        "threshold": config.breaking_threshold,
+        "total_collected": total_collected,
+    })
+
+    if not candidates:
+        logger.info("No breaking candidates found.")
+        return
+
+    briefing_md, briefing_data = _build_breaking_briefing(candidates, total_collected, date_str)
+    BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
+    json_path = BRIEFINGS_DIR / f"breaking_{date_str}.json"
+    md_path = BRIEFINGS_DIR / f"breaking_{date_str}.md"
+    json_path.write_text(json.dumps(briefing_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    md_path.write_text(briefing_md, encoding="utf-8")
+    logger.info(f"Breaking briefing saved: {md_path}")
+
+    if send:
+        FeishuDelivery(config).send(briefing_md, briefing_data)
+        today = datetime.now().date().isoformat()
+        for item in candidates:
+            aid = item.get("article_id")
+            if aid:
+                seen[aid] = today
+        _save_seen(SEEN_DB, seen)
+
+
+def _is_breaking_candidate(item: dict, config: Config) -> bool:
+    score = item.get("quality_score", 0)
+    if score < config.breaking_threshold:
+        return False
+
+    text = f"{item.get('title', '')} {item.get('description', '')}".lower()
+    has_major_keyword = any(kw.lower() in text for kw in config.major_keywords)
+    is_major_source = (
+        item.get("channel", "") in config.major_sources
+        or item.get("source_category") == "power_center"
+        or item.get("source_priority") == "P0"
+    )
+    return is_major_source and has_major_keyword
+
+
+def _build_breaking_briefing(items: list[dict], total_collected: int, date_str: str) -> tuple[str, dict]:
+    lines = [f"# 🚨 VC 快讯 — {date_str}\n", f"> 本轮采集 {total_collected} 条，命中重大候选 {len(items)} 条\n"]
+    for idx, item in enumerate(items, 1):
+        lines.append(f"**{idx}. {item.get('title', '')}**")
+        lines.append(f"{item.get('source', '')} · {item.get('channel', '')} · score={item.get('quality_score', 0)}")
+        if item.get("description"):
+            lines.append(item["description"][:180])
+        lines.append(f"[🔗 查看原文]({item.get('url', '')})\n")
+
+    data = {
+        "briefing_id": f"breaking_{date_str}",
+        "date": date_str,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "total_collected": total_collected,
+        "selected_count": len(items),
+        "trend_insight": "重大候选快讯，供当日补充关注。",
+        "tldr": "\n".join(f"• {item.get('title', '')[:40]}" for item in items),
+        "items": [
+            {
+                "item_id": item.get("item_id") or generate_item_id(item),
+                "title": item.get("title", ""),
+                "url": item.get("url", ""),
+                "source": item.get("source", ""),
+                "channel": item.get("channel", ""),
+                "domain": item.get("domain", ""),
+                "summary": item.get("summary", ""),
+                "why_it_matters": item.get("why_it_matters", ""),
+                "quality_score": item.get("quality_score", 0),
+                "published_at": item.get("published_at", ""),
+                "article_id": item.get("article_id", ""),
+                "description": item.get("description", "")[:500],
+            }
+            for item in items
+        ],
+    }
+    return "\n".join(lines), data
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="VC Info Agent")
     parser.add_argument(
@@ -366,8 +577,18 @@ if __name__ == "__main__":
         "--dry-run-llm", action="store_true",
         help="Collect + entity coarse-cluster + LLM refinement; no delivery",
     )
+    parser.add_argument(
+        "--breaking-check", action="store_true",
+        help="Run a lightweight material-news check between daily briefings",
+    )
+    parser.add_argument(
+        "--no-send", action="store_true",
+        help="With --breaking-check, archive candidates without sending to Feishu",
+    )
     args = parser.parse_args()
-    if args.dry_run_llm:
+    if args.breaking_check:
+        breaking_check(send=not args.no_send)
+    elif args.dry_run_llm:
         dry_run(use_llm=True)
     elif args.dry_run:
         dry_run(use_llm=False)
