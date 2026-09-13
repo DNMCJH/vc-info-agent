@@ -1,5 +1,6 @@
 """H5 briefing server — serves detail pages, public JSON APIs, and feedback API."""
 
+import html
 import json
 import logging
 from datetime import datetime
@@ -10,6 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
+
+from search_index import BriefingIndex
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +47,11 @@ CARDS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/cards", StaticFiles(directory=str(CARDS_DIR)), name="cards")
 
 env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
+# RSS feeds deliver titles with HTML entities (&#8217; etc.) already encoded.
+# Jinja2 escapes the ampersand again, so decode before rendering.
+env.filters["unescape"] = lambda value: html.unescape(value) if value else value
+
+index = BriefingIndex(BRIEFINGS_DIR)
 
 
 def _briefing_files() -> list[Path]:
@@ -89,10 +97,17 @@ async def latest_frontend():
     return HTMLResponse(template.render())
 
 
+@app.get("/archive", response_class=HTMLResponse)
+async def archive_frontend():
+    """History page; fetches /api/briefings client-side like the index does."""
+    template = env.get_template("archive.html")
+    return HTMLResponse(template.render())
+
+
 @app.get("/api/briefings")
 async def list_briefings(limit: int = 30):
     """List available daily briefings for a thin external frontend."""
-    limit = max(1, min(limit, 100))
+    limit = max(1, min(limit, 500))
     summaries = []
     for path in _briefing_files()[:limit]:
         try:
@@ -102,6 +117,54 @@ async def list_briefings(limit: int = 30):
             continue
         summaries.append(_briefing_summary(data))
     return JSONResponse({"count": len(summaries), "items": summaries})
+
+
+@app.get("/search", response_class=HTMLResponse)
+async def search_frontend():
+    """Item-level search page across all briefings."""
+    template = env.get_template("search.html")
+    return HTMLResponse(template.render())
+
+
+@app.get("/api/facets")
+async def search_facets():
+    """Filter options (calendar, domains, sources, channels) from real data."""
+    return JSONResponse(index.facets())
+
+
+@app.get("/api/search")
+async def search_items(
+    q: str = "",
+    domain: str = "",
+    source: str = "",
+    channel: str = "",
+    year: str = "",
+    month: str = "",
+    date: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    min_score: int = 0,
+    sort: str = "date",
+    offset: int = 0,
+    limit: int = 20,
+):
+    """Item-level search across every briefing, with facets and paging."""
+    result = index.search(
+        keyword=q,
+        domain=domain,
+        source=source,
+        channel=channel,
+        year=year,
+        month=month,
+        date=date,
+        date_from=date_from,
+        date_to=date_to,
+        min_score=min_score,
+        sort=sort,
+        offset=offset,
+        limit=limit,
+    )
+    return JSONResponse(result)
 
 
 @app.get("/api/latest")

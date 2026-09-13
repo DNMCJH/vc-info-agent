@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VC Agent 历史日报</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f7f2ea;
+  color: #211c18;
+  line-height: 1.65;
+}
+.page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 32px 18px 56px;
+}
+.hero {
+  border: 1px solid #eadfce;
+  background: linear-gradient(135deg, #fffaf2 0%, #f2e6d4 100%);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 16px 42px rgba(74, 55, 33, 0.08);
+}
+.eyebrow {
+  color: #9b6b2f;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 10px 0 8px;
+  font-size: clamp(30px, 6vw, 52px);
+  line-height: 1.08;
+}
+.subtitle {
+  margin: 0;
+  max-width: 680px;
+  color: #675a4c;
+  font-size: 16px;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.pill {
+  border: 1px solid #e2d2bd;
+  background: rgba(255,255,255,0.6);
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: #6b4b25;
+  font-size: 13px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: #171411;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+}
+.btn.secondary {
+  background: #fff;
+  color: #5f4525;
+  border: 1px solid #e2d2bd;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 22px;
+}
+.toolbar input {
+  flex: 1 1 220px;
+  min-width: 0;
+  border: 1px solid #e2d2bd;
+  background: #fffaf4;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 14px;
+  color: #211c18;
+}
+.toolbar input:focus {
+  outline: 2px solid #c98f3f;
+  outline-offset: 1px;
+}
+.toolbar select {
+  border: 1px solid #e2d2bd;
+  background: #fffaf4;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  color: #211c18;
+  cursor: pointer;
+}
+.toolbar select:disabled {
+  color: #b3a795;
+  cursor: not-allowed;
+}
+.reset-btn {
+  border: 1px solid #e2d2bd;
+  background: #fff;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #5f4525;
+  cursor: pointer;
+}
+.reset-btn:hover { background: #f7efe3; }
+.count-line {
+  color: #7b6a58;
+  font-size: 13px;
+  margin-top: 10px;
+}
+.timeline {
+  display: grid;
+  gap: 14px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.entry {
+  border: 1px solid #eadfce;
+  background: #fffaf4;
+  border-radius: 20px;
+  padding: 20px 22px;
+}
+.entry-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.entry-date {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+.entry-date a {
+  color: #1f2937;
+  text-decoration: none;
+}
+.entry-date a:hover { color: #b45309; }
+.entry-stats {
+  color: #9b8b75;
+  font-size: 13px;
+}
+.entry-tldr {
+  color: #4b4036;
+  font-size: 14px;
+  margin: 10px 0 0;
+}
+.titles {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.titles li {
+  background: #ffffff;
+  border: 1px solid #efe5d8;
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: #3d342c;
+  font-size: 13px;
+}
+.entry-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.entry-links a {
+  color: #6b4b25;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px solid #e2d2bd;
+}
+.entry-links a:hover { color: #b45309; }
+.empty, .error {
+  color: #7a6b5c;
+  padding: 20px;
+}
+.error { color: #991b1b; }
+@media (max-width: 640px) {
+  .hero, .entry { padding: 18px; border-radius: 18px; }
+  /* Let the count drop below the input so the placeholder is not truncated. */
+  .toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .toolbar input { flex: 1 1 auto; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <div class="eyebrow">VC Agent Archive</div>
+    <h1>历史日报</h1>
+    <p class="subtitle">按日期倒序列出往期日报，点任意一期可打开完整 H5 内容。支持按日期或标题关键词过滤。</p>
+    <div class="meta" id="meta">
+      <span class="pill">加载中...</span>
+    </div>
+    <div class="actions">
+      <a class="btn" href="/search">搜索全部内容</a>
+      <a class="btn secondary" href="/">返回最新日报</a>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="过滤本页：日期或标题关键词" autocomplete="off">
+    <select id="year-select" aria-label="按年份筛选"><option value="">全部年份</option></select>
+    <select id="month-select" aria-label="按月份筛选"><option value="">全部月份</option></select>
+    <select id="day-select" aria-label="按日期筛选"><option value="">全部日期</option></select>
+    <button type="button" class="reset-btn" id="reset-btn">重置</button>
+  </div>
+  <div class="count-line" id="count-line"></div>
+
+  <ul class="timeline" id="timeline">
+    <li class="empty">正在读取历史日报...</li>
+  </ul>
+</main>
+
+<script>
+const apiBase = new URLSearchParams(window.location.search).get("api") || "";
+let allEntries = [];
+
+// RSS titles arrive with HTML entities already in them; decode before
+// re-escaping so users never see a literal &#8217;.
+function decodeEntities(value) {
+  const text = String(value ?? "");
+  if (!text.includes("&")) return text;
+  const el = document.createElement("textarea");
+  el.innerHTML = text;
+  return el.value;
+}
+
+function escapeHtml(value) {
+  return decodeEntities(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function sameOriginUrl(path) {
+  if (!path) return "";
+  if (/^https?:\/\//.test(path)) return path;
+  return `${apiBase}${path}`;
+}
+
+const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+
+function formatDate(value) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value || "未知日期";
+  return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()} ${WEEKDAYS[date.getDay()]}`;
+}
+
+// First line of the tldr is enough for a list preview.
+function firstLine(tldr) {
+  return String(tldr || "")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean)[0] || "";
+}
+
+function entryHtml(entry) {
+  const titles = Array.isArray(entry.top_titles) ? entry.top_titles : [];
+  const detailUrl = sameOriginUrl(entry.html_url || `/briefing/${entry.date}`);
+  const jsonUrl = sameOriginUrl(entry.api_url || `/api/briefing/${entry.date}`);
+  const preview = firstLine(entry.tldr);
+  return `
+    <li class="entry">
+      <div class="entry-head">
+        <h2 class="entry-date"><a href="${escapeHtml(detailUrl)}">${escapeHtml(formatDate(entry.date))}</a></h2>
+        <span class="entry-stats">采集 ${escapeHtml(entry.total_collected || 0)} 条 · 精选 ${escapeHtml(entry.selected_count || 0)} 条</span>
+      </div>
+      ${preview ? `<p class="entry-tldr">${escapeHtml(preview)}</p>` : ""}
+      ${titles.length ? `<ul class="titles">${titles.map(t => `<li>${escapeHtml(t)}</li>`).join("")}</ul>` : ""}
+      <div class="entry-links">
+        <a href="${escapeHtml(detailUrl)}">打开完整日报</a>
+        <a href="${escapeHtml(jsonUrl)}">JSON</a>
+      </div>
+    </li>
+  `;
+}
+
+function renderList(entries) {
+  const timeline = document.getElementById("timeline");
+  const countLine = document.getElementById("count-line");
+  if (!entries.length) {
+    timeline.innerHTML = `<li class="empty">没有匹配的日报。</li>`;
+    countLine.textContent = `0 / ${allEntries.length} 期`;
+    return;
+  }
+  timeline.innerHTML = entries.map(entryHtml).join("");
+  countLine.textContent = `${entries.length} / ${allEntries.length} 期`;
+}
+
+const MONTH_LABELS = {
+  "01": "1 月", "02": "2 月", "03": "3 月", "04": "4 月",
+  "05": "5 月", "06": "6 月", "07": "7 月", "08": "8 月",
+  "09": "9 月", "10": "10 月", "11": "11 月", "12": "12 月",
+};
+
+function currentFilter() {
+  return {
+    keyword: document.getElementById("search").value.trim().toLowerCase(),
+    year: document.getElementById("year-select").value,
+    month: document.getElementById("month-select").value,
+    day: document.getElementById("day-select").value,
+  };
+}
+
+function applyFilter() {
+  const { keyword, year, month, day } = currentFilter();
+  renderList(allEntries.filter(entry => {
+    const date = entry.date || "";
+    if (day && date !== day) return false;
+    if (year && date.slice(0, 4) !== year) return false;
+    if (month && date.slice(5, 7) !== month) return false;
+    if (!keyword) return true;
+    const haystack = [
+      date,
+      entry.tldr,
+      entry.trend_insight,
+      ...(Array.isArray(entry.top_titles) ? entry.top_titles : []),
+    ].join(" ").toLowerCase();
+    return haystack.includes(keyword);
+  }));
+}
+
+// Months depend on the chosen year, days on year+month; rebuild downstream
+// selects so users never see an option that yields zero issues.
+function refreshMonthOptions() {
+  const year = document.getElementById("year-select").value;
+  const monthSel = document.getElementById("month-select");
+  const months = new Set();
+  allEntries.forEach(e => {
+    if (!e.date) return;
+    if (!year || e.date.slice(0, 4) === year) months.add(e.date.slice(5, 7));
+  });
+  const sorted = [...months].sort().reverse();
+  monthSel.innerHTML = `<option value="">全部月份</option>` +
+    sorted.map(m => `<option value="${m}">${MONTH_LABELS[m] || m}</option>`).join("");
+  monthSel.disabled = sorted.length === 0;
+}
+
+function refreshDayOptions() {
+  const { year, month } = currentFilter();
+  const daySel = document.getElementById("day-select");
+  const days = allEntries
+    .map(e => e.date)
+    .filter(Boolean)
+    .filter(d => (!year || d.slice(0, 4) === year) && (!month || d.slice(5, 7) === month));
+  daySel.innerHTML = `<option value="">全部日期</option>` +
+    days.map(d => `<option value="${d}">${escapeHtml(d)}</option>`).join("");
+  daySel.disabled = days.length === 0;
+}
+
+function buildYearOptions() {
+  const years = [...new Set(allEntries.map(e => (e.date || "").slice(0, 4)).filter(Boolean))]
+    .sort().reverse();
+  document.getElementById("year-select").innerHTML =
+    `<option value="">全部年份</option>` +
+    years.map(y => `<option value="${y}">${y} 年</option>`).join("");
+}
+
+function wireControls() {
+  const search = document.getElementById("search");
+  const yearSel = document.getElementById("year-select");
+  const monthSel = document.getElementById("month-select");
+  const daySel = document.getElementById("day-select");
+
+  search.addEventListener("input", applyFilter);
+  yearSel.addEventListener("change", () => {
+    refreshMonthOptions();
+    refreshDayOptions();
+    applyFilter();
+  });
+  monthSel.addEventListener("change", () => {
+    refreshDayOptions();
+    applyFilter();
+  });
+  daySel.addEventListener("change", applyFilter);
+
+  document.getElementById("reset-btn").addEventListener("click", () => {
+    search.value = "";
+    yearSel.value = "";
+    refreshMonthOptions();
+    refreshDayOptions();
+    applyFilter();
+  });
+}
+
+async function loadArchive() {
+  const response = await fetch(`${apiBase}/api/briefings?limit=500`, { headers: { "Accept": "application/json" } });
+  if (!response.ok) throw new Error(`API ${response.status}`);
+  return response.json();
+}
+
+loadArchive()
+  .then(data => {
+    allEntries = Array.isArray(data.items) ? data.items : [];
+    const dates = allEntries.map(e => e.date).filter(Boolean);
+    document.getElementById("meta").innerHTML = `
+      <span class="pill">共 ${escapeHtml(allEntries.length)} 期</span>
+      ${dates.length ? `<span class="pill">最新 ${escapeHtml(dates[0])}</span>
+      <span class="pill">最早 ${escapeHtml(dates[dates.length - 1])}</span>` : ""}
+    `;
+    buildYearOptions();
+    refreshMonthOptions();
+    refreshDayOptions();
+    renderList(allEntries);
+    wireControls();
+  })
+  .catch(error => {
+    document.getElementById("meta").innerHTML = `<span class="pill">读取失败</span>`;
+    document.getElementById("timeline").innerHTML = `<li class="error">无法读取历史日报：${escapeHtml(error.message)}</li>`;
+  });
+</script>
+</body>
+</html>

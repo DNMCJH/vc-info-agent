@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VC Agent 内容搜索</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f7f2ea;
+  color: #211c18;
+  line-height: 1.65;
+}
+.page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 32px 18px 56px;
+}
+.hero {
+  border: 1px solid #eadfce;
+  background: linear-gradient(135deg, #fffaf2 0%, #f2e6d4 100%);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 16px 42px rgba(74, 55, 33, 0.08);
+}
+.eyebrow {
+  color: #9b6b2f;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 10px 0 8px;
+  font-size: clamp(28px, 5.5vw, 46px);
+  line-height: 1.08;
+}
+.subtitle {
+  margin: 0;
+  max-width: 680px;
+  color: #675a4c;
+  font-size: 16px;
+}
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 16px;
+}
+.nav-links a {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b4b25;
+  text-decoration: none;
+  border-bottom: 1px solid #e2d2bd;
+}
+.nav-links a:hover { color: #b45309; }
+.searchbar {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.searchbar input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px solid #e2d2bd;
+  background: #fffdf9;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font: inherit;
+  font-size: 15px;
+  color: #211c18;
+}
+.searchbar input:focus { outline: 2px solid #c98f3f; outline-offset: 1px; }
+.searchbar button {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 22px;
+  background: #171411;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.filters select {
+  border: 1px solid #e2d2bd;
+  background: #fffaf4;
+  border-radius: 999px;
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 13px;
+  color: #211c18;
+  cursor: pointer;
+}
+.filters select:disabled { color: #b3a795; cursor: not-allowed; }
+.filters button {
+  border: 1px solid #e2d2bd;
+  background: #fff;
+  border-radius: 999px;
+  padding: 9px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #5f4525;
+  cursor: pointer;
+}
+.status {
+  margin-top: 18px;
+  color: #7b6a58;
+  font-size: 13px;
+}
+.results {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.hit {
+  border: 1px solid #eadfce;
+  background: #fffaf4;
+  border-radius: 18px;
+  padding: 18px 20px;
+}
+.hit-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.tag {
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f0e7d8;
+  color: #6b4b25;
+}
+.tag.ai { background: #e0edff; color: #1d4ed8; }
+.tag.chip { background: #ede4ff; color: #6b21a8; }
+.tag.robot { background: #dcf5e6; color: #15803d; }
+.tag.score { background: #fff1d6; color: #92400e; }
+.hit-date {
+  margin-left: auto;
+  color: #9b8b75;
+  font-size: 12px;
+}
+.hit-date a { color: #9b8b75; text-decoration: none; border-bottom: 1px solid #e8ddcc; }
+.hit-date a:hover { color: #b45309; }
+.hit-title {
+  display: block;
+  color: #1f2937;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  margin-bottom: 6px;
+}
+.hit-title:hover { color: #b45309; }
+.hit mark {
+  background: #ffd66b;
+  color: #3d2a00;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.hit-meta { color: #9b8b75; font-size: 12px; margin-bottom: 8px; }
+.hit-summary { color: #4b4036; font-size: 14px; margin: 0; }
+.hit-why {
+  color: #8a4b12;
+  background: #fff3df;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.more-row { margin-top: 20px; text-align: center; }
+.more-btn {
+  border: 1px solid #e2d2bd;
+  background: #fff;
+  border-radius: 999px;
+  padding: 11px 26px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  color: #5f4525;
+  cursor: pointer;
+}
+.more-btn:disabled { color: #b3a795; cursor: default; }
+.empty, .error { color: #7a6b5c; padding: 24px 4px; }
+.error { color: #991b1b; }
+@media (max-width: 640px) {
+  .hero, .hit { padding: 18px; border-radius: 18px; }
+  .searchbar { flex-direction: column; }
+  .hit-date { margin-left: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <div class="eyebrow">VC Agent Search</div>
+    <h1>内容搜索</h1>
+    <p class="subtitle">在全部历史日报的新闻条目中搜索关键词，可叠加领域、来源、渠道、时间和质量分筛选。</p>
+    <div class="nav-links">
+      <a href="/">最新日报</a>
+      <a href="/archive">历史日报</a>
+    </div>
+
+    <form class="searchbar" id="search-form">
+      <input id="q" type="search" placeholder="输入关键词，例如 英伟达、融资、具身智能" autocomplete="off">
+      <button type="submit">搜索</button>
+    </form>
+
+    <div class="filters">
+      <select id="domain" aria-label="领域"><option value="">全部领域</option></select>
+      <select id="source" aria-label="来源"><option value="">全部来源</option></select>
+      <select id="channel" aria-label="渠道"><option value="">全部渠道</option></select>
+      <select id="year" aria-label="年份"><option value="">全部年份</option></select>
+      <select id="month" aria-label="月份"><option value="">全部月份</option></select>
+      <select id="min-score" aria-label="最低质量分">
+        <option value="0">不限质量分</option>
+        <option value="70">70 分以上</option>
+        <option value="80">80 分以上</option>
+        <option value="90">90 分以上</option>
+      </select>
+      <select id="sort" aria-label="排序">
+        <option value="date">按日期</option>
+        <option value="score">按质量分</option>
+      </select>
+      <button type="button" id="reset">重置</button>
+    </div>
+
+    <div class="status" id="status">正在加载筛选项...</div>
+  </section>
+
+  <ul class="results" id="results"></ul>
+  <div class="more-row" id="more-row" hidden>
+    <button type="button" class="more-btn" id="more-btn">加载更多</button>
+  </div>
+</main>
+
+<script>
+const apiBase = new URLSearchParams(window.location.search).get("api") || "";
+const PAGE_SIZE = 20;
+let offset = 0;
+let lastQuery = null;
+let loading = false;
+
+const MONTH_LABELS = {
+  "01": "1 月", "02": "2 月", "03": "3 月", "04": "4 月",
+  "05": "5 月", "06": "6 月", "07": "7 月", "08": "8 月",
+  "09": "9 月", "10": "10 月", "11": "11 月", "12": "12 月",
+};
+const DOMAIN_CLASS = { "AI": "ai", "芯片": "chip", "机器人": "robot" };
+
+let calendar = {};
+
+// RSS-sourced titles already contain HTML entities like &#8217;. Decoding
+// first stops them from showing up literally after re-escaping.
+function decodeEntities(value) {
+  const text = String(value ?? "");
+  if (!text.includes("&")) return text;
+  const el = document.createElement("textarea");
+  el.innerHTML = text;
+  return el.value;
+}
+
+function escapeHtml(value) {
+  return decodeEntities(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+// Highlight matched terms. Input is already escaped, so only the safe <mark>
+// tags get injected here.
+function highlight(escapedText, terms) {
+  if (!terms.length) return escapedText;
+  let out = escapedText;
+  terms.forEach(term => {
+    const safe = escapeHtml(term).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (!safe) return;
+    out = out.replace(new RegExp(safe, "gi"), m => `<mark>${m}</mark>`);
+  });
+  return out;
+}
+
+function el(id) { return document.getElementById(id); }
+
+function readForm() {
+  return {
+    q: el("q").value.trim(),
+    domain: el("domain").value,
+    source: el("source").value,
+    channel: el("channel").value,
+    year: el("year").value,
+    month: el("month").value,
+    min_score: el("min-score").value,
+    sort: el("sort").value,
+  };
+}
+
+function queryString(params, extra = {}) {
+  const merged = { ...params, ...extra };
+  const usp = new URLSearchParams();
+  Object.entries(merged).forEach(([k, v]) => {
+    if (v !== "" && v !== null && v !== undefined && v !== "0") usp.set(k, v);
+  });
+  return usp.toString();
+}
+
+function hitHtml(item, terms) {
+  const cls = DOMAIN_CLASS[item.domain] || "";
+  const title = highlight(escapeHtml(item.title || "未命名条目"), terms);
+  const summary = highlight(escapeHtml(item.summary || ""), terms);
+  return `
+    <li class="hit">
+      <div class="hit-top">
+        ${item.domain ? `<span class="tag ${cls}">${escapeHtml(item.domain)}</span>` : ""}
+        ${item.quality_score ? `<span class="tag score">${escapeHtml(item.quality_score)} 分</span>` : ""}
+        <span class="hit-date"><a href="/briefing/${escapeHtml(item.date)}">${escapeHtml(item.date)} 日报</a></span>
+      </div>
+      <a class="hit-title" href="${escapeHtml(item.url || "#")}" target="_blank" rel="noopener noreferrer">${title}</a>
+      <div class="hit-meta">${escapeHtml(item.source || "")} · ${escapeHtml(item.channel || "未知渠道")}</div>
+      ${summary ? `<p class="hit-summary">${summary}</p>` : ""}
+      ${item.why_it_matters ? `<div class="hit-why">💡 ${highlight(escapeHtml(item.why_it_matters), terms)}</div>` : ""}
+    </li>
+  `;
+}
+
+async function runSearch({ append = false } = {}) {
+  if (loading) return;
+  loading = true;
+  const params = append && lastQuery ? lastQuery : readForm();
+  if (!append) {
+    offset = 0;
+    lastQuery = params;
+  }
+
+  const qs = queryString(params, { offset, limit: PAGE_SIZE });
+  el("status").textContent = append ? "正在加载更多..." : "正在搜索...";
+
+  try {
+    const response = await fetch(`${apiBase}/api/search?${qs}`, { headers: { "Accept": "application/json" } });
+    if (!response.ok) throw new Error(`API ${response.status}`);
+    const data = await response.json();
+    const terms = (params.q || "").split(/\s+/).filter(Boolean);
+    const html = (data.items || []).map(item => hitHtml(item, terms)).join("");
+
+    if (append) {
+      el("results").insertAdjacentHTML("beforeend", html);
+    } else {
+      el("results").innerHTML = html || `<li class="empty">没有匹配的条目，试试放宽筛选条件。</li>`;
+    }
+
+    offset += (data.items || []).length;
+    el("more-row").hidden = !data.has_more;
+    el("more-btn").disabled = false;
+    el("status").textContent = data.total
+      ? `共 ${data.total} 条匹配，已显示 ${offset} 条`
+      : "共 0 条匹配";
+  } catch (error) {
+    el("status").textContent = "";
+    const msg = `<li class="error">搜索失败：${escapeHtml(error.message)}</li>`;
+    if (append) el("results").insertAdjacentHTML("beforeend", msg);
+    else el("results").innerHTML = msg;
+  } finally {
+    loading = false;
+  }
+}
+
+function fillSelect(id, options, allLabel) {
+  el(id).innerHTML = `<option value="">${allLabel}</option>` +
+    options.map(o => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.value)} (${o.count})</option>`).join("");
+}
+
+function refreshMonths() {
+  const year = el("year").value;
+  const months = new Set();
+  Object.entries(calendar).forEach(([y, list]) => {
+    if (!year || y === year) list.forEach(m => months.add(m.month));
+  });
+  const sorted = [...months].sort().reverse();
+  el("month").innerHTML = `<option value="">全部月份</option>` +
+    sorted.map(m => `<option value="${m}">${MONTH_LABELS[m] || m}</option>`).join("");
+  el("month").disabled = sorted.length === 0;
+}
+
+async function init() {
+  try {
+    const response = await fetch(`${apiBase}/api/facets`, { headers: { "Accept": "application/json" } });
+    if (!response.ok) throw new Error(`API ${response.status}`);
+    const f = await response.json();
+    calendar = f.calendar || {};
+
+    fillSelect("domain", f.domains || [], "全部领域");
+    fillSelect("source", f.sources || [], "全部来源");
+    fillSelect("channel", (f.channels || []).slice(0, 40), "全部渠道");
+    el("year").innerHTML = `<option value="">全部年份</option>` +
+      Object.keys(calendar).sort().reverse().map(y => `<option value="${y}">${y} 年</option>`).join("");
+    refreshMonths();
+
+    el("status").textContent =
+      `可搜索 ${f.total_items} 条内容，来自 ${f.total_briefings} 期日报（${f.date_range.earliest} 至 ${f.date_range.latest}）`;
+  } catch (error) {
+    el("status").textContent = `筛选项加载失败：${error.message}`;
+  }
+
+  el("search-form").addEventListener("submit", event => {
+    event.preventDefault();
+    runSearch();
+  });
+  ["domain", "source", "channel", "min-score", "sort"].forEach(id =>
+    el(id).addEventListener("change", () => runSearch()));
+  el("year").addEventListener("change", () => { refreshMonths(); runSearch(); });
+  el("month").addEventListener("change", () => runSearch());
+  el("more-btn").addEventListener("click", () => {
+    el("more-btn").disabled = true;
+    runSearch({ append: true });
+  });
+  el("reset").addEventListener("click", () => {
+    el("q").value = "";
+    ["domain", "source", "channel", "year", "month"].forEach(id => { el(id).value = ""; });
+    el("min-score").value = "0";
+    el("sort").value = "date";
+    refreshMonths();
+    runSearch();
+  });
+
+  // Deep-link support: /search?q=... renders results on load.
+  const initial = new URLSearchParams(window.location.search).get("q");
+  if (initial) {
+    el("q").value = initial;
+    runSearch();
+  }
+}
+
+init();
+</script>
+</body>
+</html>

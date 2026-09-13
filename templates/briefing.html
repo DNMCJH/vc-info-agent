@@ -46,6 +46,22 @@ body {
   color: #9b8b75;
 }
 
+.nav-links {
+  display: flex;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.nav-links a {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b4b25;
+  text-decoration: none;
+  border-bottom: 1px solid #e8e0d4;
+}
+
+.nav-links a:hover { color: #b45309; }
+
 /* Audio player */
 .audio-section {
   background: #f0ebe3;
@@ -265,6 +281,11 @@ audio {
   <div class="brand">VC Daily Brief</div>
   <h1 class="title">每日简报 · {{ date }}</h1>
   <div class="meta">{{ weekday }} · 采集 {{ total_collected }} 条，精选 {{ item_count }} 条</div>
+  <div class="nav-links">
+    <a href="/">最新日报</a>
+    <a href="/archive">历史日报</a>
+    <a href="/search">内容搜索</a>
+  </div>
 </div>
 
 {% if audio_url %}
@@ -296,12 +317,12 @@ audio {
   <div class="item-card" id="item-{{ item.item_id }}">
     <div class="item-num">{{ loop.index }}</div>
     <div class="item-title">
-      <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
+      <a href="{{ item.url }}" target="_blank">{{ item.title | unescape }}</a>
     </div>
     <div class="item-source">{{ item.channel }}</div>
-    <div class="item-summary">{{ item.summary }}</div>
+    <div class="item-summary">{{ item.summary | unescape }}</div>
     {% if item.why_it_matters %}
-    <div class="item-why">💡 {{ item.why_it_matters }}</div>
+    <div class="item-why">💡 {{ item.why_it_matters | unescape }}</div>
     {% endif %}
     <div class="feedback-row" data-id="{{ item.item_id }}">
       <button type="button" class="fb-btn" data-rating="like">有用</button>

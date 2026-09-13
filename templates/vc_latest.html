@@ -189,8 +189,18 @@ h1 {
 <script>
 const apiBase = new URLSearchParams(window.location.search).get("api") || "";
 
+// RSS titles arrive with HTML entities already in them; decode before
+// re-escaping so users never see a literal &#8217;.
+function decodeEntities(value) {
+  const text = String(value ?? "");
+  if (!text.includes("&")) return text;
+  const el = document.createElement("textarea");
+  el.innerHTML = text;
+  return el.value;
+}
+
 function escapeHtml(value) {
-  return String(value ?? "")
+  return decodeEntities(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -249,6 +259,8 @@ function render(data) {
 
   document.getElementById("actions").innerHTML = `
     <a class="btn" href="${escapeHtml(sameOriginUrl(data.html_url || `/briefing/${data.date}`))}">打开完整 H5 日报</a>
+    <a class="btn secondary" href="${escapeHtml(sameOriginUrl("/archive"))}">历史日报</a>
+    <a class="btn secondary" href="${escapeHtml(sameOriginUrl("/search"))}">内容搜索</a>
     <a class="btn secondary" href="${escapeHtml(sameOriginUrl(data.api_url || `/api/briefing/${data.date}`))}">查看 JSON</a>
   `;
 
