@@ -256,7 +256,7 @@ function toolCard(item, terms) {
       <div class="card-top">
         ${item.form ? `<span class="tag form">${escapeHtml(FORM_LABELS[item.form] || item.form)}</span>` : ""}
         <span class="tag stars">★ ${escapeHtml(formatStars(item.stars))}</span>
-        ${delta ? `<span class="tag growth">${delta > 0 ? "+" : ""}${escapeHtml(delta)} / ${escapeHtml(growth.days ?? "")}天</span>` : ""}
+        ${delta ? `<span class="tag growth">${delta > 0 ? "+" : ""}${escapeHtml(delta)} star / ${escapeHtml(growth.window ?? 7)} 天</span>` : ""}
         ${item.language ? `<span class="card-side">${escapeHtml(item.language)}</span>` : ""}
       </div>
       <a class="card-title" href="${escapeHtml(item.url || "#")}" target="_blank" rel="noopener noreferrer">${name}</a>
@@ -326,10 +326,12 @@ async function loadTools(ticket) {
   el("status").textContent = "正在加载工具...";
   try {
     if (sort === "growth") {
-      // Dedicated endpoint: only entries with enough star history, ranked by delta.
-      const data = await radarFetch("kb/trending", { limit: 200 });
+      // Dedicated endpoint: only entries with enough star history, ranked by
+      // delta. It ignores facet filters, so ask for the whole ranking and
+      // filter below — truncating first would drop matches further down.
+      const data = await radarFetch("kb/trending", { limit: 200, cap: 200 });
       rows = data.items || [];
-      totalAvailable = rows.length;
+      totalAvailable = data.count || rows.length;
     } else {
       const data = await radarFetch("kb", {
         q: el("tools-q").value.trim(),
@@ -349,12 +351,16 @@ async function loadTools(ticket) {
       const form = el("tools-form").value;
       const usage = el("tools-usage").value;
       const chain = el("tools-toolchain").value;
+      const hasFilter = Boolean(q || form || usage || chain);
       rows = rows.filter(r =>
         (!form || r.form === form) &&
         (!usage || (r.usage || []).includes(usage)) &&
         (!chain || (r.toolchain || []).includes(chain)) &&
         (!q || `${r.full_name} ${r.description || ""} ${r.value || ""}`.toLowerCase().includes(q))
       );
+      // After local filtering the pre-cap total no longer describes this list,
+      // so report the filtered size instead of implying more matches exist.
+      if (hasFilter) totalAvailable = rows.length;
     }
     if (isStale(ticket)) return;
     shown = 0;
