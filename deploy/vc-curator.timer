@@ -1,0 +1,11 @@
+[Unit]
+Description=Run editor's picks weekly
+
+[Timer]
+# Monday 09:20 local. Off the hour so it doesn't collide with the 08:00 daily
+# briefing or the other cron-driven jobs on this box.
+OnCalendar=Mon 09:20
+Persistent=true
+
+[Install]
+WantedBy=timers.target

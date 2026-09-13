@@ -28,6 +28,7 @@ load_dotenv(BASE_DIR / ".env")
 TEMPLATES_DIR = BASE_DIR / "templates"
 DATA_DIR = BASE_DIR / "data"
 BRIEFINGS_DIR = DATA_DIR / "briefings"
+PICKS_DIR = DATA_DIR / "picks"
 AUDIO_DIR = DATA_DIR / "audio"
 FEEDBACK_FILE = DATA_DIR / "feedback.json"
 
@@ -159,6 +160,34 @@ async def radar_frontend():
     """AI Radar tools + news, served through the server-side proxy below."""
     template = env.get_template("radar.html")
     return HTMLResponse(template.render())
+
+
+@app.get("/picks", response_class=HTMLResponse)
+async def picks_frontend():
+    """Editor's picks across half-month / month windows."""
+    template = env.get_template("picks.html")
+    return HTMLResponse(template.render())
+
+
+def _picks_files() -> list[Path]:
+    """Pick files, newest window first."""
+    if not PICKS_DIR.exists():
+        return []
+    return sorted(PICKS_DIR.glob("picks_*.json"), key=lambda p: p.stem, reverse=True)
+
+
+@app.get("/api/picks")
+async def list_picks():
+    """Available pick periods, newest first, with their items inlined."""
+    periods = []
+    for path in _picks_files():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
+            logger.warning("Skipping picks file %s: %s", path, exc)
+            continue
+        periods.append(data)
+    return JSONResponse({"count": len(periods), "periods": periods})
 
 
 @app.get("/api/facets")

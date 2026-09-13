@@ -1,0 +1,12 @@
+[Unit]
+Description=VC Info Agent Editor's Picks (LLM-scored)
+After=network.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/vc-info-agent
+# half-month covers the last completed half; on the 1st of a month the
+# preceding run has already closed the previous month's window.
+ExecStart=/home/ubuntu/vc-info-agent/venv/bin/python src/curator.py --period half-month
+Environment=PYTHONUNBUFFERED=1
