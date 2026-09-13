@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Radar — 工具与资讯</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f7f2ea;
+  color: #211c18;
+  line-height: 1.65;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 32px 18px 56px; }
+.hero {
+  border: 1px solid #eadfce;
+  background: linear-gradient(135deg, #fffaf2 0%, #f2e6d4 100%);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 16px 42px rgba(74, 55, 33, 0.08);
+}
+.eyebrow {
+  color: #9b6b2f;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+h1 { margin: 10px 0 8px; font-size: clamp(28px, 5.5vw, 46px); line-height: 1.08; }
+.subtitle { margin: 0; max-width: 680px; color: #675a4c; font-size: 16px; }
+.nav-links { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; }
+.nav-links a {
+  font-size: 13px; font-weight: 700; color: #6b4b25;
+  text-decoration: none; border-bottom: 1px solid #e2d2bd;
+}
+.nav-links a:hover { color: #b45309; }
+.tabs { display: flex; gap: 8px; margin-top: 20px; }
+.tab {
+  border: 1px solid #e2d2bd;
+  background: #fffaf4;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font: inherit; font-size: 14px; font-weight: 700;
+  color: #6b4b25; cursor: pointer;
+}
+.tab[aria-selected="true"] { background: #171411; color: #fff; border-color: #171411; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.controls input[type="search"] {
+  flex: 1 1 200px; min-width: 0;
+  border: 1px solid #e2d2bd; background: #fffdf9;
+  border-radius: 999px; padding: 11px 16px;
+  font: inherit; font-size: 14px; color: #211c18;
+}
+.controls input:focus, .controls select:focus { outline: 2px solid #c98f3f; outline-offset: 1px; }
+.controls select {
+  border: 1px solid #e2d2bd; background: #fffaf4;
+  border-radius: 999px; padding: 10px 14px;
+  font: inherit; font-size: 13px; color: #211c18; cursor: pointer;
+}
+.controls button {
+  border: 1px solid #e2d2bd; background: #fff;
+  border-radius: 999px; padding: 10px 16px;
+  font: inherit; font-size: 13px; font-weight: 700;
+  color: #5f4525; cursor: pointer;
+}
+.status { margin-top: 16px; color: #7b6a58; font-size: 13px; }
+.cards { display: grid; gap: 12px; margin: 20px 0 0; padding: 0; list-style: none; }
+.card {
+  border: 1px solid #eadfce; background: #fffaf4;
+  border-radius: 18px; padding: 18px 20px;
+}
+.card-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.tag {
+  border-radius: 999px; padding: 3px 10px;
+  font-size: 12px; font-weight: 700;
+  background: #f0e7d8; color: #6b4b25;
+}
+.tag.form { background: #e0edff; color: #1d4ed8; }
+.tag.stars { background: #fff1d6; color: #92400e; }
+.tag.growth { background: #dcf5e6; color: #15803d; }
+.tag.score { background: #ffe4e6; color: #9f1239; }
+.tag.topic { background: #ede4ff; color: #6b21a8; }
+.card-side { margin-left: auto; color: #9b8b75; font-size: 12px; }
+.card-title {
+  display: block; color: #1f2937; font-weight: 700; font-size: 16px;
+  text-decoration: none; margin-bottom: 6px;
+}
+.card-title:hover { color: #b45309; }
+.card-title mark, .card-desc mark {
+  background: #ffd66b; color: #3d2a00; font-weight: 700;
+  border-radius: 3px; padding: 0 2px;
+}
+.card-meta { color: #9b8b75; font-size: 12px; margin-bottom: 8px; }
+.card-desc { color: #4b4036; font-size: 14px; margin: 0; }
+.card-why {
+  color: #8a4b12; background: #fff3df;
+  border-radius: 10px; padding: 8px 10px; margin-top: 10px; font-size: 13px;
+}
+.dims { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.dim {
+  background: #fff; border: 1px solid #efe5d8; border-radius: 8px;
+  padding: 3px 8px; font-size: 12px; color: #6b5a48;
+}
+.more-row { margin-top: 20px; text-align: center; }
+.more-btn {
+  border: 1px solid #e2d2bd; background: #fff;
+  border-radius: 999px; padding: 11px 26px;
+  font: inherit; font-weight: 700; font-size: 14px;
+  color: #5f4525; cursor: pointer;
+}
+.empty, .error { color: #7a6b5c; padding: 24px 4px; }
+.error { color: #991b1b; }
+@media (max-width: 640px) {
+  .hero, .card { padding: 18px; border-radius: 18px; }
+  .card-side { margin-left: 0; width: 100%; }
+  .tabs { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <div class="eyebrow">AI Radar</div>
+    <h1>工具与资讯雷达</h1>
+    <p class="subtitle">来自 AI Radar 的 GitHub 工具库与重大 AI 资讯，和日报同源但独立收录：工具看 star 增速与分类，资讯看多维评分。</p>
+    <div class="nav-links">
+      <a href="/">最新日报</a>
+      <a href="/archive">历史日报</a>
+      <a href="/search">内容搜索</a>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab" id="tab-tools" role="tab" aria-selected="true">GitHub 工具</button>
+      <button type="button" class="tab" id="tab-news" role="tab" aria-selected="false">AI 资讯</button>
+    </div>
+
+    <div class="controls" id="controls-tools">
+      <input id="tools-q" type="search" placeholder="搜索工具名、描述或价值说明" autocomplete="off">
+      <select id="tools-form" aria-label="形态"><option value="">全部形态</option></select>
+      <select id="tools-usage" aria-label="用途"><option value="">全部用途</option></select>
+      <select id="tools-toolchain" aria-label="工具链"><option value="">全部工具链</option></select>
+      <select id="tools-sort" aria-label="排序">
+        <option value="stars">按 star 数</option>
+        <option value="growth">按 star 增速</option>
+      </select>
+      <button type="button" id="tools-reset">重置</button>
+    </div>
+
+    <div class="controls" id="controls-news" hidden>
+      <input id="news-q" type="search" placeholder="搜索资讯标题、摘要或影响说明" autocomplete="off">
+      <select id="news-topic" aria-label="主题"><option value="">全部主题</option></select>
+      <select id="news-days" aria-label="时间窗">
+        <option value="">不限时间</option>
+        <option value="7">最近 7 天</option>
+        <option value="30">最近 30 天</option>
+        <option value="90">最近 90 天</option>
+      </select>
+      <button type="button" id="news-reset">重置</button>
+    </div>
+
+    <div class="status" id="status">正在加载雷达数据...</div>
+  </section>
+
+  <ul class="cards" id="cards"></ul>
+  <div class="more-row" id="more-row" hidden>
+    <button type="button" class="more-btn" id="more-btn">加载更多</button>
+  </div>
+</main>
+
+<script>
+const apiBase = new URLSearchParams(window.location.search).get("api") || "";
+const PAGE_SIZE = 20;
+let tab = "tools";
+let rows = [];          // result set for the active tab (may be capped)
+let shown = 0;
+let totalAvailable = 0; // matches before the cap, so the count stays honest
+
+const FORM_LABELS = {
+  tool: "工具", skill: "技能", mcp: "MCP", agent: "Agent",
+  awesome: "清单", workflow: "工作流", plugin: "插件",
+  framework: "框架", teaching: "教学", benchmark: "评测",
+  course: "课程", other: "其他",
+};
+const USAGE_LABELS = {
+  dev: "开发", automation: "自动化", info: "信息",
+  content: "内容", teaching: "教学",
+};
+
+function el(id) { return document.getElementById(id); }
+
+function decodeEntities(value) {
+  const text = String(value ?? "");
+  if (!text.includes("&")) return text;
+  const box = document.createElement("textarea");
+  box.innerHTML = text;
+  return box.value;
+}
+
+function escapeHtml(value) {
+  return decodeEntities(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function highlight(escaped, terms) {
+  if (!terms.length) return escaped;
+  let out = escaped;
+  terms.forEach(term => {
+    const safe = escapeHtml(term).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (!safe) return;
+    out = out.replace(new RegExp(safe, "gi"), m => `<mark>${m}</mark>`);
+  });
+  return out;
+}
+
+function formatStars(value) {
+  const n = Number(value) || 0;
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+}
+
+async function radarFetch(path, params = {}) {
+  const usp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== "" && v !== null && v !== undefined) usp.set(k, v);
+  });
+  const qs = usp.toString();
+  const url = `${apiBase}/api/radar/${path}${qs ? `?${qs}` : ""}`;
+  const response = await fetch(url, { headers: { "Accept": "application/json" } });
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body.error) detail = body.error;
+    } catch (_) { /* keep status text */ }
+    throw new Error(detail);
+  }
+  return response.json();
+}
+
+function toolCard(item, terms) {
+  const growth = item.growth || null;
+  const delta = growth ? growth.delta : null;
+  const name = highlight(escapeHtml(item.full_name || "未命名仓库"), terms);
+  const desc = highlight(escapeHtml(item.description || ""), terms);
+  const value = item.value ? highlight(escapeHtml(item.value), terms) : "";
+  const chains = (item.toolchain || []).join(" · ");
+  const usages = (item.usage || []).map(u => USAGE_LABELS[u] || u).join(" · ");
+  return `
+    <li class="card">
+      <div class="card-top">
+        ${item.form ? `<span class="tag form">${escapeHtml(FORM_LABELS[item.form] || item.form)}</span>` : ""}
+        <span class="tag stars">★ ${escapeHtml(formatStars(item.stars))}</span>
+        ${delta ? `<span class="tag growth">${delta > 0 ? "+" : ""}${escapeHtml(delta)} / ${escapeHtml(growth.days ?? "")}天</span>` : ""}
+        ${item.language ? `<span class="card-side">${escapeHtml(item.language)}</span>` : ""}
+      </div>
+      <a class="card-title" href="${escapeHtml(item.url || "#")}" target="_blank" rel="noopener noreferrer">${name}</a>
+      ${(chains || usages) ? `<div class="card-meta">${escapeHtml(chains)}${chains && usages ? " · " : ""}${escapeHtml(usages)}</div>` : ""}
+      ${desc ? `<p class="card-desc">${desc}</p>` : ""}
+      ${value ? `<div class="card-why">💡 ${value}</div>` : ""}
+    </li>
+  `;
+}
+
+function newsCard(item, terms) {
+  const dims = item.score_dims || {};
+  const DIM_LABELS = { impact: "影响", relevance: "相关", novelty: "新颖", credibility: "可信" };
+  const title = highlight(escapeHtml(item.title || "未命名资讯"), terms);
+  const desc = highlight(escapeHtml(item.description || ""), terms);
+  const why = item.why_matters ? highlight(escapeHtml(item.why_matters), terms) : "";
+  return `
+    <li class="card">
+      <div class="card-top">
+        ${item.topic ? `<span class="tag topic">${escapeHtml(item.topic)}</span>` : ""}
+        ${item.score ? `<span class="tag score">${escapeHtml(item.score)} 分</span>` : ""}
+        <span class="card-side">${escapeHtml(item.first_seen || "")}</span>
+      </div>
+      <a class="card-title" href="${escapeHtml(item.url || "#")}" target="_blank" rel="noopener noreferrer">${title}</a>
+      <div class="card-meta">${escapeHtml(item.channel || "未知来源")}${item.authority ? ` · 权威度 ${escapeHtml(item.authority)}` : ""}</div>
+      ${desc ? `<p class="card-desc">${desc}</p>` : ""}
+      ${why ? `<div class="card-why">💡 ${why}</div>` : ""}
+      ${Object.keys(dims).length ? `<div class="dims">${
+        Object.entries(dims).map(([k, v]) =>
+          `<span class="dim">${escapeHtml(DIM_LABELS[k] || k)} ${escapeHtml(v)}</span>`).join("")
+      }</div>` : ""}
+    </li>
+  `;
+}
+
+function currentTerms() {
+  const raw = tab === "tools" ? el("tools-q").value : el("news-q").value;
+  return raw.trim().split(/\s+/).filter(Boolean);
+}
+
+function renderPage({ append = false } = {}) {
+  const terms = currentTerms();
+  const slice = rows.slice(shown, shown + PAGE_SIZE);
+  const render = tab === "tools" ? toolCard : newsCard;
+  const html = slice.map(item => render(item, terms)).join("");
+
+  if (append) {
+    el("cards").insertAdjacentHTML("beforeend", html);
+  } else {
+    el("cards").innerHTML = html || `<li class="empty">没有匹配的内容，试试放宽筛选条件。</li>`;
+  }
+  shown += slice.length;
+  el("more-row").hidden = shown >= rows.length;
+  if (!rows.length) {
+    el("status").textContent = "共 0 条";
+  } else if (totalAvailable > rows.length) {
+    // Be explicit that the list is capped rather than implying it's everything.
+    el("status").textContent =
+      `匹配 ${totalAvailable} 条，取前 ${rows.length} 条，已显示 ${shown} 条`;
+  } else {
+    el("status").textContent = `共 ${rows.length} 条，已显示 ${shown} 条`;
+  }
+}
+
+async function loadTools(ticket) {
+  const sort = el("tools-sort").value;
+  el("status").textContent = "正在加载工具...";
+  try {
+    if (sort === "growth") {
+      // Dedicated endpoint: only entries with enough star history, ranked by delta.
+      const data = await radarFetch("kb/trending", { limit: 200 });
+      rows = data.items || [];
+      totalAvailable = rows.length;
+    } else {
+      const data = await radarFetch("kb", {
+        q: el("tools-q").value.trim(),
+        form: el("tools-form").value,
+        usage: el("tools-usage").value,
+        toolchain: el("tools-toolchain").value,
+        // Radar returns all 565 tools (~630KB) with no limit param; cap is
+        // applied by our proxy. 200 is well past what anyone scrolls.
+        cap: 200,
+      });
+      rows = data.items || [];
+      totalAvailable = data.count || rows.length;
+    }
+    // /api/kb/trending ignores filters, so apply them client-side for parity.
+    if (sort === "growth") {
+      const q = el("tools-q").value.trim().toLowerCase();
+      const form = el("tools-form").value;
+      const usage = el("tools-usage").value;
+      const chain = el("tools-toolchain").value;
+      rows = rows.filter(r =>
+        (!form || r.form === form) &&
+        (!usage || (r.usage || []).includes(usage)) &&
+        (!chain || (r.toolchain || []).includes(chain)) &&
+        (!q || `${r.full_name} ${r.description || ""} ${r.value || ""}`.toLowerCase().includes(q))
+      );
+    }
+    if (isStale(ticket)) return;
+    shown = 0;
+    renderPage();
+  } catch (error) {
+    if (isStale(ticket)) return;
+    rows = [];
+    totalAvailable = 0;
+    el("cards").innerHTML = `<li class="error">工具库读取失败：${escapeHtml(error.message)}</li>`;
+    el("status").textContent = "";
+    el("more-row").hidden = true;
+  }
+}
+
+async function loadNews(ticket) {
+  el("status").textContent = "正在加载资讯...";
+  try {
+    const data = await radarFetch("news", {
+      q: el("news-q").value.trim(),
+      topic: el("news-topic").value,
+      days: el("news-days").value,
+      limit: 500,
+    });
+    if (isStale(ticket)) return;
+    rows = data.items || [];
+    totalAvailable = data.count || rows.length;
+    shown = 0;
+    renderPage();
+  } catch (error) {
+    if (isStale(ticket)) return;
+    rows = [];
+    totalAvailable = 0;
+    el("cards").innerHTML = `<li class="error">资讯读取失败：${escapeHtml(error.message)}</li>`;
+    el("status").textContent = "";
+    el("more-row").hidden = true;
+  }
+}
+
+// Each reload gets a ticket; a slow in-flight response whose ticket is stale
+// is discarded. Dropping new requests instead would make filter changes look
+// dead whenever the previous fetch is slow.
+let requestTicket = 0;
+
+function reload() {
+  requestTicket += 1;
+  const ticket = requestTicket;
+  const job = tab === "tools" ? loadTools(ticket) : loadNews(ticket);
+  job.catch(error => console.error("radar reload failed", error));
+}
+
+function isStale(ticket) {
+  return ticket !== requestTicket;
+}
+
+function switchTab(next) {
+  if (tab === next) return;
+  tab = next;
+  el("tab-tools").setAttribute("aria-selected", String(next === "tools"));
+  el("tab-news").setAttribute("aria-selected", String(next === "news"));
+  el("controls-tools").hidden = next !== "tools";
+  el("controls-news").hidden = next !== "news";
+  el("cards").innerHTML = "";
+  el("more-row").hidden = true;
+  reload();
+}
+
+function fillSelect(id, entries, allLabel, labelMap = {}) {
+  el(id).innerHTML = `<option value="">${allLabel}</option>` +
+    entries.map(([value, count]) =>
+      `<option value="${escapeHtml(value)}">${escapeHtml(labelMap[value] || value)} (${count})</option>`
+    ).join("");
+}
+
+async function init() {
+  el("tab-tools").addEventListener("click", () => switchTab("tools"));
+  el("tab-news").addEventListener("click", () => switchTab("news"));
+
+  ["tools-form", "tools-usage", "tools-toolchain", "tools-sort"].forEach(id =>
+    el(id).addEventListener("change", reload));
+  ["news-topic", "news-days"].forEach(id =>
+    el(id).addEventListener("change", reload));
+
+  // Debounce typing so each keystroke doesn't hit the proxy.
+  let timer = null;
+  ["tools-q", "news-q"].forEach(id => el(id).addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(reload, 400);
+  }));
+
+  el("tools-reset").addEventListener("click", () => {
+    el("tools-q").value = "";
+    ["tools-form", "tools-usage", "tools-toolchain"].forEach(id => { el(id).value = ""; });
+    el("tools-sort").value = "stars";
+    reload();
+  });
+  el("news-reset").addEventListener("click", () => {
+    el("news-q").value = "";
+    el("news-topic").value = "";
+    el("news-days").value = "";
+    reload();
+  });
+  el("more-btn").addEventListener("click", () => renderPage({ append: true }));
+
+  try {
+    const [facets, topics] = await Promise.all([
+      radarFetch("kb/facets"),
+      radarFetch("news/topics"),
+    ]);
+    const byCount = obj => Object.entries(obj || {}).sort((a, b) => b[1] - a[1]);
+    fillSelect("tools-form", byCount(facets.form), "全部形态", FORM_LABELS);
+    fillSelect("tools-usage", byCount(facets.usage), "全部用途", USAGE_LABELS);
+    fillSelect("tools-toolchain", byCount(facets.toolchain), "全部工具链");
+    fillSelect("news-topic", byCount(topics.topics).slice(0, 40), "全部主题");
+  } catch (error) {
+    el("status").textContent = `筛选项加载失败：${error.message}`;
+    return;
+  }
+
+  reload();
+}
+
+init();
+</script>
+
+</body>
+</html>

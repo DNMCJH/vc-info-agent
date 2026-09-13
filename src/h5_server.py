@@ -3,8 +3,12 @@
 import html
 import json
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
+
+import httpx
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +21,10 @@ from search_index import BriefingIndex
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parent.parent
+# systemd starts this without the project env loaded, and the radar proxy needs
+# RADAR_API_KEY from .env.
+load_dotenv(BASE_DIR / ".env")
+
 TEMPLATES_DIR = BASE_DIR / "templates"
 DATA_DIR = BASE_DIR / "data"
 BRIEFINGS_DIR = DATA_DIR / "briefings"
@@ -24,6 +32,26 @@ AUDIO_DIR = DATA_DIR / "audio"
 FEEDBACK_FILE = DATA_DIR / "feedback.json"
 
 DOMAIN_EMOJI = {"AI": "🤖", "芯片": "🔬", "机器人": "🦾"}
+
+# AI Radar runs as a separate service (gh-tool-radar) behind an API key.
+# Proxying server-side keeps the key out of the browser.
+RADAR_API_BASE = os.getenv("RADAR_API_BASE", "http://127.0.0.1:9005").rstrip("/")
+RADAR_API_KEY = os.getenv("RADAR_API_KEY", "")
+RADAR_TIMEOUT = 15
+# Only these paths may be proxied, so a crafted path can't reach other routes.
+RADAR_ALLOWED_ORIGINS = {
+    "https://vcbrief.site",
+    "http://127.0.0.1:9003",
+    "http://127.0.0.1:9013",  # local preview
+}
+RADAR_ALLOWED_PATHS = {
+    "/api/kb",
+    "/api/kb/facets",
+    "/api/kb/trending",
+    "/api/kb/leaderboard",
+    "/api/news",
+    "/api/news/topics",
+}
 WEEKDAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
 app = FastAPI(title="VC Briefing H5")
@@ -126,6 +154,13 @@ async def search_frontend():
     return HTMLResponse(template.render())
 
 
+@app.get("/radar", response_class=HTMLResponse)
+async def radar_frontend():
+    """AI Radar tools + news, served through the server-side proxy below."""
+    template = env.get_template("radar.html")
+    return HTMLResponse(template.render())
+
+
 @app.get("/api/facets")
 async def search_facets():
     """Filter options (calendar, domains, sources, channels) from real data."""
@@ -165,6 +200,71 @@ async def search_items(
         limit=limit,
     )
     return JSONResponse(result)
+
+
+@app.get("/api/radar/{path:path}")
+async def radar_proxy(path: str, request: Request):
+    """Forward whitelisted AI Radar reads, injecting the key server-side."""
+    target = f"/api/{path}"
+    if target not in RADAR_ALLOWED_PATHS:
+        return JSONResponse({"error": "unsupported radar path"}, status_code=404)
+
+    # Briefing JSON is deliberately open (CORS *), but this route spends
+    # someone else's API key, so cross-origin browser reads are refused.
+    # Same-origin fetches send no Origin header, or send ours.
+    origin = request.headers.get("origin")
+    if origin and origin not in RADAR_ALLOWED_ORIGINS:
+        logger.warning("Radar proxy blocked cross-origin request from %s", origin)
+        return JSONResponse({"error": "cross-origin not allowed"}, status_code=403)
+
+    if not RADAR_API_KEY:
+        return JSONResponse(
+            {"error": "radar not configured", "hint": "set RADAR_API_KEY in .env"},
+            status_code=503,
+        )
+
+    params = dict(request.query_params)
+    # Never let a caller override the key we attach ourselves.
+    params.pop("key", None)
+    # `cap` is our own trimming hint, not part of the radar API.
+    params.pop("cap", None)
+    headers = {"Accept": "application/json"}
+    if RADAR_API_KEY:
+        headers["X-API-Key"] = RADAR_API_KEY
+
+    try:
+        async with httpx.AsyncClient(timeout=RADAR_TIMEOUT) as client:
+            response = await client.get(
+                f"{RADAR_API_BASE}{target}", params=params, headers=headers
+            )
+    except httpx.RequestError as exc:
+        logger.warning("Radar proxy %s failed: %s", target, exc)
+        return JSONResponse({"error": "radar unreachable"}, status_code=502)
+
+    if response.status_code >= 400:
+        logger.warning("Radar proxy %s -> HTTP %s", target, response.status_code)
+        return JSONResponse(
+            {"error": f"radar returned {response.status_code}"},
+            status_code=response.status_code,
+        )
+
+    try:
+        payload = response.json()
+    except ValueError:
+        return JSONResponse({"error": "radar returned non-JSON"}, status_code=502)
+
+    # Radar's /api/kb has no limit param and returns ~630KB for 565 tools.
+    # Trim server-side so mobile clients don't download the whole corpus.
+    if isinstance(payload, dict) and isinstance(payload.get("items"), list):
+        try:
+            cap = int(request.query_params.get("cap", "0"))
+        except ValueError:
+            cap = 0
+        if cap > 0:
+            payload["returned"] = min(cap, len(payload["items"]))
+            payload["items"] = payload["items"][:cap]
+
+    return JSONResponse(payload)
 
 
 @app.get("/api/latest")
