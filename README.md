@@ -4,6 +4,10 @@
 
 An AI-powered information aggregation agent for venture capital professionals. Automatically collects content from YouTube and RSS feeds, filters noise, generates structured daily briefings with investment insights using LLM, and delivers via Feishu.
 
+## Web App
+
+Live briefing site: <https://vcbrief.site>
+
 ## Architecture
 
 ```
@@ -56,7 +60,9 @@ vc-info-agent/
 ### Prerequisites
 
 - Python 3.10+
-- YouTube Data API v3 key ([get one here](https://console.cloud.google.com/apis/credentials))
+- TikHub API key ([tikhub.io](https://tikhub.io)) for YouTube and Twitter collection.
+  A YouTube Data API v3 key still works as a fallback but is no longer required —
+  set `TIKHUB_API_KEY` and it takes precedence.
 - DeepSeek API key ([get one here](https://platform.deepseek.com/api_keys)), or any OpenAI-compatible LLM
 
 ### Setup
@@ -141,12 +147,17 @@ Set `FEEDBACK_BASE_URL` in `.env` to the tunnel's public URL.
 
 面向 VC 投资人的 AI 信息聚合 Agent。自动从 YouTube 和 RSS 源采集内容，过滤噪音，通过 LLM 生成带投资洞察的结构化每日简报，支持飞书推送。
 
+## 网页入口
+
+在线日报：<https://vcbrief.site>
+
 ## 快速开始
 
 ### 环境要求
 
 - Python 3.10+
-- YouTube Data API v3 密钥
+- TikHub API 密钥（YouTube 与 Twitter 采集共用）。YouTube Data API v3 密钥仍可作为回退，
+  但已非必需 —— 配置 `TIKHUB_API_KEY` 后优先走 TikHub。
 - DeepSeek API 密钥（或任何 OpenAI 兼容 LLM）
 
 ### 安装运行

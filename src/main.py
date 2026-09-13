@@ -14,6 +14,7 @@ from pathlib import Path
 from config import Config
 from collector import YouTubeCollector
 from rss_collector import RSSCollector
+from youtube_tikhub_collector import YouTubeTikHubCollector
 from twitter_collector import TwitterCollector
 from wechat_collector import WechatCollector
 from filter import ContentFilter
@@ -296,18 +297,31 @@ def _append_report_log(
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+def _youtube_collector(config: Config):
+    """Pick a YouTube backend: TikHub first, official API v3 as fallback.
+
+    The v3 key expired in July 2026 and renewing it needs a billed Google
+    Cloud project, so TikHub (already used for Twitter) takes precedence.
+    """
+    if os.getenv("TIKHUB_API_KEY"):
+        return YouTubeTikHubCollector(config)
+    if config.youtube_api_key:
+        return YouTubeCollector(config)
+    return None
+
+
 def _collect_sources(config: Config) -> list[dict]:
     """Collect from every configured source type."""
     all_items = []
 
-    if config.youtube_api_key:
+    yt_collector = _youtube_collector(config)
+    if yt_collector:
         logger.info("Step 1a: Collecting from YouTube...")
-        yt_collector = YouTubeCollector(config)
         yt_items = yt_collector.collect()
         all_items.extend(yt_items)
         logger.info(f"YouTube: {len(yt_items)} items")
     else:
-        logger.warning("YOUTUBE_API_KEY not set, skipping YouTube")
+        logger.warning("No YouTube backend configured, skipping YouTube")
 
     logger.info("Step 1b: Collecting from RSS feeds...")
     rss_collector = RSSCollector(config)
@@ -397,8 +411,9 @@ def dry_run(use_llm: bool = False):
     logger.info(f"=== VC Info Agent DRY RUN ({mode} dedup) ===")
 
     all_items = []
-    if config.youtube_api_key:
-        all_items.extend(YouTubeCollector(config).collect())
+    yt_collector = _youtube_collector(config)
+    if yt_collector:
+        all_items.extend(yt_collector.collect())
     all_items.extend(RSSCollector(config).collect())
     all_items.extend(TwitterCollector(config).collect())
     all_items.extend(WechatCollector(config).collect())
